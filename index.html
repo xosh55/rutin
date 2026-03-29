@@ -479,16 +479,18 @@ function OuraPanel(){
       var end=new Date();
       var start=new Date();start.setDate(start.getDate()-range);
       var sd=dk(start),ed=dk(end);
+      var proxy="https://corsproxy.io/?";
       var base="https://api.ouraring.com/v2/usercollection/";
       var headers={"Authorization":"Bearer "+token};
+      function pf(url){return fetch(proxy+url,{headers:headers}).then(function(r){if(!r.ok)throw new Error(r.status+" "+r.statusText+" — kolla att token är korrekt");return r.json()})}
 
       var results=await Promise.all([
-        fetch(base+"daily_readiness?start_date="+sd+"&end_date="+ed,{headers:headers}).then(function(r){return r.json()}),
-        fetch(base+"daily_sleep?start_date="+sd+"&end_date="+ed,{headers:headers}).then(function(r){return r.json()}),
-        fetch(base+"daily_activity?start_date="+sd+"&end_date="+ed,{headers:headers}).then(function(r){return r.json()}),
-        fetch(base+"heart_rate?start_date="+sd+"T00:00:00&end_date="+ed+"T23:59:59",{headers:headers}).then(function(r){return r.json()}),
-        fetch(base+"workout?start_date="+sd+"&end_date="+ed,{headers:headers}).then(function(r){return r.json()}),
-        fetch(base+"sleep?start_date="+sd+"&end_date="+ed,{headers:headers}).then(function(r){return r.json()})
+        pf(base+"daily_readiness?start_date="+sd+"&end_date="+ed),
+        pf(base+"daily_sleep?start_date="+sd+"&end_date="+ed),
+        pf(base+"daily_activity?start_date="+sd+"&end_date="+ed),
+        pf(base+"heart_rate?start_date="+sd+"T00:00:00&end_date="+ed+"T23:59:59"),
+        pf(base+"workout?start_date="+sd+"&end_date="+ed),
+        pf(base+"sleep?start_date="+sd+"&end_date="+ed)
       ]);
 
       var readiness=results[0].data||[];
