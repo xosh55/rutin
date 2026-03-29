@@ -25,7 +25,7 @@ input,textarea,button,select{font-family:'Outfit',sans-serif}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.4/babel.min.js"></script>
 <script type="text/babel">
-const sb=supabase.createClient('https://wimmxhivojtjqfzhwmbk.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndpbW14aGl2b2p0anFmemh3bWJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MTU1NzgsImV4cCI6MjA5MDE5MTU3OH0.reDfi0hP62JsxxPmHFGki7hUub_u7zDFsPXwM_L6aEY',{realtime:{params:{eventsPerSecond:0}}});
+const sb=supabase.createClient('https://crzvaaymkjvpivbhiuiy.supabase.co','eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNyenZhYXlta2p2cGl2YmhpdWl5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3OTU0MzEsImV4cCI6MjA5MDM3MTQzMX0.KbhUFgonkq9GNqrKZe86e4nT2NR3jgE-JWw_E-XnFEo',{realtime:{params:{eventsPerSecond:0}}});
 const{useState,useEffect,useCallback,useRef}=React;
 
 const T={bg:"#0a0a0f",card:"#12121a",surface:"#1a1a28",border:"#252536",text:"#f0f0f5",muted:"#8888a0",subtle:"#55556a",accent:"#6c5ce7",accent2:"#00cec9",success:"#00b894",warning:"#fdcb6e",danger:"#ff6b6b",pin:"#ff9ff3"};
@@ -157,7 +157,7 @@ function AddForm({onSave,onClose}){
     </div></div>);
 }
 
-function TabToday({items,checks,selDate,setSelDate,toggleCheck,toggleAllSlot,ouraCache}){
+function TabToday({items,checks,selDate,setSelDate,toggleCheck,toggleAllSlot,ouraCache,calData,pepConfig,trackerData}){
   var d=dk(selDate),dow=selDate.getDay(),dayC=checks[d]||{};
   var training=getTraining(dow);
   var today=items.filter(i=>shouldShow(i,selDate)).concat(training);
@@ -185,6 +185,60 @@ function TabToday({items,checks,selDate,setSelDate,toggleCheck,toggleAllSlot,our
       <button onClick={()=>{var n=new Date(selDate);n.setDate(n.getDate()+1);setSelDate(n)}} style={{background:"none",border:"none",cursor:"pointer",padding:4}}><Ic n="chevR" s={16} c={T.muted}/></button>
     </div>
     <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6,padding:"4px 18px 12px"}}>{[{l:"Att göra",v:tot-done,c:T.warning},{l:"Klart",v:done,c:T.success},{l:"Dagar",v:stackD>=0?stackD+"d":"—",c:T.accent}].map((s,i)=><div key={i} style={{background:T.card,border:"1px solid "+T.border,borderRadius:8,padding:"8px 10px",textAlign:"center"}}><div style={{fontSize:8,color:T.muted,marginBottom:2}}>{s.l}</div><div style={{fontSize:18,fontWeight:800,color:s.c,fontFamily:"'JetBrains Mono',monospace",lineHeight:1}}>{s.v}</div></div>)}</div>
+    {/* IN-APP BANNERS */}
+    {(function(){
+      var banners=[];
+      var todayStr=dk(new Date());
+      var isToday=d===todayStr;
+      // Calendar events for today
+      if(isToday&&calData){
+        var cal=calData||{};
+        var evts=(cal.events||[]).filter(function(e){return e.date===d});
+        var recs=getRecurringForDate(cal.recurring||[],d);
+        evts.concat(recs).forEach(function(e){
+          banners.push({type:"event",icon:"📅",text:e.name+(e.time?" · "+e.time:""),color:T.accent});
+        });
+        // Upcoming tasks (today, not done)
+        (cal.tasks||[]).filter(function(t){return t.date===d&&!t.done}).forEach(function(t){
+          var pColor=t.priority==="high"?T.danger:t.priority==="medium"?T.warning:T.accent2;
+          banners.push({type:"task",icon:"☑",text:t.name,color:pColor});
+        });
+        // Overdue tasks
+        (cal.tasks||[]).filter(function(t){return t.date<d&&!t.done}).forEach(function(t){
+          banners.push({type:"overdue",icon:"⚠",text:t.name+" (försenad)",color:T.danger});
+        });
+      }
+      // Peptide paus warnings (within 7 days)
+      if(isToday){
+        var now=new Date();
+        PEPTIDE_CYCLES.forEach(function(c){
+          if(!c.pauseDate)return;
+          var pd=new Date(c.pauseDate);
+          var diff=Math.floor((pd-now)/86400000);
+          if(diff>0&&diff<=7)banners.push({type:"paus",icon:"💉",text:c.name+" paus om "+diff+"d",color:T.warning});
+        });
+        // Vial low warnings from peptide cycles
+        // Biweekly photo reminder
+        var pl=trackerData&&trackerData.photoLog?trackerData.photoLog:[];
+        var photoNeed=true;
+        if(pl.length>0){
+          var lastP=pl[pl.length-1];
+          var dpSince=Math.floor((now-new Date(lastP.date))/86400000);
+          if(dpSince<14)photoNeed=false;
+        }
+        if(photoNeed)banners.push({type:"photo",icon:"📸",text:"Dags för progressfoto!"+(pl.length>0?" ("+Math.floor((now-new Date(pl[pl.length-1].date))/86400000)+"d sedan)":""),color:T.pin});
+      }
+      if(banners.length===0)return null;
+      return <div style={{padding:"0 18px 8px"}}>
+        {banners.slice(0,5).map(function(b,i){
+          return <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",borderRadius:8,background:b.color+"10",border:"1px solid "+b.color+"22",marginBottom:3}}>
+            <span style={{fontSize:13,flexShrink:0}}>{b.icon}</span>
+            <span style={{fontSize:11,fontWeight:600,color:b.color,flex:1}}>{b.text}</span>
+            <span style={{fontSize:8,color:T.subtle,textTransform:"uppercase",flexShrink:0}}>{b.type==="overdue"?"försenad":b.type==="paus"?"paus":b.type==="task"?"task":b.type==="photo"?"foto":"event"}</span>
+          </div>
+        })}
+      </div>;
+    })()}
     {/* Recovery Index Widget */}
     {(function(){
       var rs=ouraReady&&ouraReady.score?ouraReady.score:0;
@@ -348,7 +402,474 @@ function TabPlan(){
   </div>);
 }
 
-function TabInfo({items,saveItems,setModal}){
+function PepEditPanel({c,ov,st,onSave,onClose}){
+  var curDose=ov&&ov.dose?ov.dose:(st.phase&&st.phase.dose?st.phase.dose:"");
+  const[dose,setDose]=useState(curDose);
+  const[isPaused,setIsPaused]=useState(ov&&ov.paused?true:false);
+  var phases=c.phases||[];
+  return(<div onClick={function(e){e.stopPropagation()}} style={{marginTop:10,padding:12,borderRadius:8,background:"rgba(108,92,231,0.06)",border:"1px solid "+c.color+"33"}}>
+    <div style={{fontSize:12,fontWeight:800,color:c.color,marginBottom:10}}>Redigera {c.name}</div>
+    {/* Phase overview */}
+    {phases.length>0&&<div style={{marginBottom:10}}>
+      <div style={{fontSize:9,color:"#8888a0",marginBottom:4}}>Dosfaser</div>
+      {phases.map(function(p,i){
+        var isActive=st.phase&&st.phase.name===p.name;
+        return <div key={i} style={{display:"flex",alignItems:"center",gap:6,padding:"4px 8px",borderRadius:5,marginBottom:2,background:isActive?c.color+"15":"transparent",border:isActive?"1px solid "+c.color+"33":"1px solid transparent"}}>
+          <div style={{width:6,height:6,borderRadius:3,background:isActive?c.color:"#55556a"}}/>
+          <span style={{fontSize:11,fontWeight:isActive?700:400,color:isActive?"#f0f0f5":"#8888a0"}}>{p.name}</span>
+          <span style={{fontSize:10,color:"#55556a",fontFamily:"'JetBrains Mono'",marginLeft:"auto"}}>{p.dose}</span>
+        </div>
+      })}
+    </div>}
+    {/* Change dose */}
+    <div style={{fontSize:9,color:"#8888a0",marginBottom:4}}>Aktuell dos</div>
+    <div style={{display:"flex",gap:6,marginBottom:10}}>
+      <input value={dose} onChange={function(e){setDose(e.target.value)}} placeholder="t.ex. 4mg/v" style={{flex:1,padding:"8px 10px",borderRadius:6,border:"1px solid #252536",background:"#1a1a28",color:"#f0f0f5",fontSize:12,fontFamily:"'JetBrains Mono'",outline:"none"}}/>
+      <button onClick={function(){if(dose.trim())onSave(c.id,{dose:dose.trim()})}} style={{padding:"8px 14px",borderRadius:6,border:"none",background:dose.trim()!==curDose?c.color:"#1a1a28",color:dose.trim()!==curDose?"#fff":"#55556a",fontSize:11,fontWeight:700,cursor:dose.trim()!==curDose?"pointer":"not-allowed"}}>Spara</button>
+    </div>
+    {/* Pause/resume toggle */}
+    <div style={{display:"flex",gap:8,marginBottom:6}}>
+      {!isPaused&&<button onClick={function(){onSave(c.id,{paused:true});setIsPaused(true)}} style={{flex:1,padding:"8px 0",borderRadius:6,border:"1px solid #fdcb6e44",background:"#fdcb6e12",color:"#fdcb6e",fontSize:11,fontWeight:700,cursor:"pointer"}}>Pausa</button>}
+      {isPaused&&<button onClick={function(){onSave(c.id,{paused:false});setIsPaused(false)}} style={{flex:1,padding:"8px 0",borderRadius:6,border:"1px solid #00b89444",background:"#00b89412",color:"#00b894",fontSize:11,fontWeight:700,cursor:"pointer"}}>Återaktivera</button>}
+      <button onClick={onClose} style={{padding:"8px 14px",borderRadius:6,border:"1px solid #252536",background:"transparent",color:"#8888a0",fontSize:11,fontWeight:600,cursor:"pointer"}}>Stäng</button>
+    </div>
+    {/* Maintenance info */}
+    {c.maintenanceDose&&<div style={{fontSize:9,color:"#00cec9",marginTop:4}}>Planerad underhållsdos: {c.maintenanceDose}</div>}
+  </div>);
+}
+
+function TrackerPanel({trackerData,saveTracker,checks,items,ouraCache,pepConfig,savePepConfig}){
+  var td=trackerData||DEFAULT_TRACKER;
+  var pc=pepConfig||DEFAULT_PEPTIDE_CONFIG;
+  var weightArr=td.weight||[];
+  var vials=td.vials||DEFAULT_TRACKER.vials;
+  var startW=td.startWeight||108;
+  var goalW=td.goalWeight||68;
+  var latestW=weightArr.length>0?weightArr[weightArr.length-1].kg:null;
+  const[wInput,setWInput]=useState("");
+  const[wDate,setWDate]=useState(dk(new Date()));
+  const[wRange,setWRange]=useState("30d");
+  const[editVial,setEditVial]=useState(null);
+  const[vialInput,setVialInput]=useState("");
+  const[editPep,setEditPep]=useState(null);
+  const[photoNote,setPhotoNote]=useState("");
+  const[photoDate,setPhotoDate]=useState(dk(new Date()));
+
+  var photoLog=td.photoLog||[];
+
+  function savePhotoEntry(){
+    var np=photoLog.slice();
+    np.push({date:photoDate,note:photoNote.trim()||"Progressfoto taget",id:uid()});
+    np.sort(function(a,b){return a.date<b.date?-1:1});
+    saveTracker(Object.assign({},td,{photoLog:np}));
+    setPhotoNote("");setPhotoDate(dk(new Date()));
+  }
+
+  function removePhotoEntry(pid){
+    var np=photoLog.filter(function(p){return p.id!==pid});
+    saveTracker(Object.assign({},td,{photoLog:np}));
+  }
+
+  // Biweekly photo reminder check
+  var needsPhoto=false;
+  if(photoLog.length===0){needsPhoto=true}
+  else{
+    var lastPhoto=photoLog[photoLog.length-1];
+    var daysSinceLast=Math.floor((now-new Date(lastPhoto.date))/86400000);
+    if(daysSinceLast>=14)needsPhoto=true;
+  }
+
+  function saveWeight(){
+    if(!wInput||isNaN(wInput))return;
+    var useDate=wDate||dk(new Date());
+    var nw=weightArr.filter(function(w){return w.date!==useDate});
+    nw.push({date:useDate,kg:parseFloat(wInput)});
+    nw.sort(function(a,b){return a.date<b.date?-1:1});
+    saveTracker(Object.assign({},td,{weight:nw}));
+    setWInput("");setWDate(dk(new Date()));
+  }
+
+  function updateVial(vid){
+    if(!vialInput||isNaN(vialInput))return;
+    var todayStr=dk(new Date());
+    var nv=vials.map(function(v){return v.id===vid?Object.assign({},v,{remainingMl:parseFloat(vialInput),resetDate:todayStr,mlAtReset:parseFloat(vialInput)}):v});
+    saveTracker(Object.assign({},td,{vials:nv}));
+    setEditVial(null);setVialInput("");
+  }
+
+  function autoCalcVial(v){
+    if(!v.doses||v.doses.length===0)return v.remainingMl;
+    var rd=v.resetDate||"2026-03-28";
+    var base=v.mlAtReset!=null?v.mlAtReset:v.totalMl;
+    var consumed=0;
+    var startD=new Date(rd);
+    var today=new Date();today.setHours(0,0,0,0);
+    var d=new Date(startD);
+    while(d<=today){
+      var ds=dk(d);
+      var dayChecks=checks[ds];
+      if(dayChecks){
+        v.doses.forEach(function(dose){
+          if(dayChecks[dose.itemId])consumed+=dose.ml;
+        });
+      }
+      d.setDate(d.getDate()+1);
+    }
+    return Math.max(0,Math.round((base-consumed)*100)/100);
+  }
+
+  // Weight change calcs
+  var now=new Date();
+  var weekAgo=new Date(now);weekAgo.setDate(weekAgo.getDate()-7);
+  var monthAgo=new Date(now);monthAgo.setDate(monthAgo.getDate()-30);
+  var weekAgoStr=dk(weekAgo),monthAgoStr=dk(monthAgo);
+  var wThisWeek=null,wThisMonth=null;
+  if(latestW&&weightArr.length>1){
+    var weekW=weightArr.filter(function(w){return w.date>=weekAgoStr});
+    if(weekW.length>1)wThisWeek=Math.round((weekW[weekW.length-1].kg-weekW[0].kg)*10)/10;
+    var monthW=weightArr.filter(function(w){return w.date>=monthAgoStr});
+    if(monthW.length>1)wThisMonth=Math.round((monthW[monthW.length-1].kg-monthW[0].kg)*10)/10;
+  }
+  var totalLoss=latestW!=null?Math.round((startW-latestW)*10)/10:startW-72;
+
+  // Weight graph data
+  var filteredW=weightArr;
+  if(wRange==="7d"){var d7=dk(new Date(now.getTime()-7*86400000));filteredW=weightArr.filter(function(w){return w.date>=d7})}
+  else if(wRange==="30d"){var d30=dk(new Date(now.getTime()-30*86400000));filteredW=weightArr.filter(function(w){return w.date>=d30})}
+  else if(wRange==="90d"){var d90=dk(new Date(now.getTime()-90*86400000));filteredW=weightArr.filter(function(w){return w.date>=d90})}
+  var graphData=filteredW.map(function(w){return{v:w.kg,l:w.date.substring(5)}});
+
+  // Peptide cycle status with phases
+  var todayStr=dk(now);
+  function getCycleStatus(c){
+    var ov=pc.overrides&&pc.overrides[c.id];
+    if(ov&&ov.paused)return{status:"PAUS",daysLeft:null,progress:null,dayNum:0,total:c.cycleLen,phase:null,phaseName:"Pausad manuellt"};
+    var startD=new Date(c.start);
+    var diffDays=Math.floor((now-startD)/86400000);
+    if(diffDays<0)return{status:"KOMMANDE",daysLeft:Math.abs(diffDays),progress:0,dayNum:0,total:c.cycleLen||0,phase:null,phaseName:null};
+    // Find active phase
+    var activePhase=null;
+    if(c.phases&&c.phases.length>0){
+      for(var i=c.phases.length-1;i>=0;i--){
+        var p=c.phases[i];
+        if(p.startDay!=null&&diffDays>=p.startDay){
+          if(p.endDay==null||diffDays<=p.endDay){activePhase=p;break}
+        }
+      }
+      if(!activePhase)activePhase=c.phases[c.phases.length-1];
+    }
+    if(!c.cycleLen)return{status:"AKTIV",daysLeft:null,progress:null,dayNum:diffDays+1,total:null,phase:activePhase,phaseName:activePhase?activePhase.name:null};
+    var pauseD=c.pauseDate?new Date(c.pauseDate):null;
+    var daysLeft=pauseD?Math.max(0,Math.floor((pauseD-now)/86400000)):null;
+    var pct=Math.min(100,Math.round(diffDays/c.cycleLen*100));
+    if(pauseD&&now>=pauseD)return{status:"PAUS",daysLeft:0,progress:100,dayNum:diffDays+1,total:c.cycleLen,phase:activePhase,phaseName:"Paus"};
+    return{status:"AKTIV",daysLeft:daysLeft,progress:pct,dayNum:diffDays+1,total:c.cycleLen,phase:activePhase,phaseName:activePhase?activePhase.name:null};
+  }
+
+  // Paus warnings (upcoming pauses within 7 days)
+  function getPausWarnings(){
+    var warnings=[];
+    PEPTIDE_CYCLES.forEach(function(c){
+      if(!c.pauseDate)return;
+      var pd=new Date(c.pauseDate);
+      var diff=Math.floor((pd-now)/86400000);
+      if(diff>0&&diff<=7){
+        warnings.push({name:c.name,color:c.color,days:diff,date:c.pauseDate});
+      }
+    });
+    return warnings;
+  }
+  var pausWarnings=getPausWarnings();
+
+  // Get current dose for a peptide (check overrides first)
+  function getCurrentDose(c){
+    var ov=pc.overrides&&pc.overrides[c.id];
+    if(ov&&ov.dose)return ov.dose;
+    var st=getCycleStatus(c);
+    if(st.phase&&st.phase.dose)return st.phase.dose;
+    return c.note;
+  }
+
+  // Save peptide override
+  function savePepOverride(pepId,data){
+    var npc=Object.assign({},pc);
+    if(!npc.overrides)npc.overrides={};
+    npc.overrides[pepId]=Object.assign({},npc.overrides[pepId]||{},data);
+    // Log to history
+    if(!npc.history)npc.history=[];
+    var entry={pepId:pepId,date:dk(new Date()),time:new Date().toISOString()};
+    if(data.dose)entry.action="Dos ändrad till "+data.dose;
+    if(data.paused===true)entry.action="Pausad";
+    if(data.paused===false)entry.action="Återaktiverad";
+    if(data.note)entry.action=data.note;
+    if(entry.action)npc.history.push(entry);
+    savePepConfig(npc);
+  }
+
+  // Compliance calc
+  function getCompliance(){
+    var last28=[];
+    for(var i=0;i<28;i++){var d=new Date(now);d.setDate(d.getDate()-i);last28.push(dk(d))}
+    var streak=0;
+    for(var i=0;i<last28.length;i++){
+      var dc=checks[last28[i]];
+      if(!dc||Object.keys(dc).length===0)break;
+      streak++;
+    }
+    // Weekly compliance (4 weeks)
+    var weeks=[];
+    for(var w=0;w<4;w++){
+      var total=0,done=0;
+      for(var d=0;d<7;d++){
+        var idx=w*7+d;
+        if(idx>=last28.length)break;
+        var dateStr=last28[idx];
+        var dateObj=new Date(dateStr);
+        var dayItems=items?items.filter(function(it){return shouldShow(it,dateObj)}):[];
+        var training=getTraining(dateObj.getDay());
+        var all=dayItems.concat(training);
+        total+=all.length;
+        var dc=checks[dateStr]||{};
+        all.forEach(function(it){if(dc[it.id])done++});
+      }
+      weeks.push({pct:total>0?Math.round(done/total*100):0,label:"V"+(4-w)});
+    }
+    weeks.reverse();
+    return{streak:streak,weeks:weeks};
+  }
+  var comp=getCompliance();
+
+  // Recovery trend from Oura
+  var recoveryData=[];
+  if(ouraCache&&ouraCache.readiness){
+    var readArr=ouraCache.readiness||[];
+    var last7=readArr.slice(-7);
+    recoveryData=last7.map(function(r){return{v:r.score||0,l:r.day?r.day.substring(5):""}});
+  }
+
+  var sbg=T.card,sb2="1px solid "+T.border;
+
+  return(<div>
+    {/* SEKTION 1: VIKT */}
+    <div style={{marginBottom:20}}>
+      <div style={{fontSize:14,fontWeight:800,color:T.text,marginBottom:10}}>Vikt</div>
+      {/* Current weight display */}
+      <div style={{background:"linear-gradient(135deg,"+T.accent+"18,"+T.accent2+"08)",border:"1px solid "+T.accent+"33",borderRadius:12,padding:16,marginBottom:10,textAlign:"center"}}>
+        <div style={{fontSize:36,fontWeight:900,fontFamily:"'JetBrains Mono',monospace",color:T.text}}>{latestW!=null?latestW:"—"}<span style={{fontSize:14,fontWeight:400,color:T.muted}}> kg</span></div>
+        {wThisWeek!=null&&<div style={{fontSize:11,color:wThisWeek<=0?T.success:T.danger,marginTop:2}}>{wThisWeek<=0?"▼":"▲"} {Math.abs(wThisWeek)} kg denna vecka</div>}
+        <div style={{fontSize:10,color:T.subtle,marginTop:4}}>Startade: {startW}kg → Nu: {latestW!=null?latestW:"?"}kg → Mål: {goalW}kg</div>
+        {/* Goal progress bar */}
+        {(function(){
+          var cur=latestW!=null?latestW:startW;
+          var range=startW-goalW;
+          var lost=startW-cur;
+          var pct=range>0?Math.min(100,Math.max(0,Math.round(lost/range*100))):0;
+          var remaining=Math.max(0,Math.round((cur-goalW)*10)/10);
+          return <div style={{marginTop:10}}>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:T.subtle,marginBottom:3}}>
+              <span>{startW}kg</span>
+              <span style={{color:T.accent2,fontWeight:700}}>{pct}%</span>
+              <span>{goalW}kg</span>
+            </div>
+            <div style={{height:8,borderRadius:4,background:T.surface,overflow:"hidden",position:"relative"}}>
+              <div style={{height:"100%",borderRadius:4,background:"linear-gradient(90deg,"+T.accent+","+T.accent2+")",width:pct+"%",transition:"width .5s"}}/>
+            </div>
+            <div style={{fontSize:9,color:T.muted,marginTop:3,textAlign:"center"}}>{remaining}kg kvar till mål</div>
+          </div>;
+        })()}
+      </div>
+      {/* Quick log with date picker */}
+      <div style={{display:"flex",gap:6,marginBottom:10}}>
+        <input value={wDate} onChange={function(e){setWDate(e.target.value)}} type="date" style={{width:110,padding:"10px 6px",borderRadius:8,border:sb2,background:sbg,color:T.text,fontSize:11,fontFamily:"'JetBrains Mono'",outline:"none"}}/>
+        <input value={wInput} onChange={function(e){setWInput(e.target.value)}} placeholder="kg" type="number" inputMode="decimal" step="0.1" style={{flex:1,padding:"10px 12px",borderRadius:8,border:sb2,background:sbg,color:T.text,fontSize:14,fontWeight:700,fontFamily:"'JetBrains Mono'",outline:"none"}}/>
+        <button onClick={saveWeight} style={{padding:"10px 16px",borderRadius:8,border:"none",background:wInput?"linear-gradient(135deg,"+T.accent+","+T.accent2+")":T.surface,color:wInput?"#fff":T.subtle,fontSize:12,fontWeight:700,cursor:wInput?"pointer":"not-allowed"}}>Spara</button>
+      </div>
+      {/* Weight graph */}
+      {graphData.length>1&&<div>
+        <div style={{display:"flex",gap:4,marginBottom:6}}>
+          {["7d","30d","90d","Allt"].map(function(r){return <button key={r} onClick={function(){setWRange(r)}} style={{padding:"3px 8px",borderRadius:5,border:wRange===r?"1px solid "+T.accent:sb2,background:wRange===r?T.accent+"15":"transparent",color:wRange===r?T.accent:T.subtle,fontSize:9,fontWeight:600,cursor:"pointer"}}>{r}</button>})}
+        </div>
+        <MiniGraph data={graphData} color={T.accent2} h={70} label="Vikt (kg)" markers={PEPTIDE_MARKERS}/>
+      </div>}
+      {/* Weight stats */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6}}>
+        {[{l:"Denna vecka",v:wThisWeek!=null?(wThisWeek<=0?"":"+") +wThisWeek+" kg":"—",c:wThisWeek!=null?(wThisWeek<=0?T.success:T.danger):T.muted},{l:"Denna månad",v:wThisMonth!=null?(wThisMonth<=0?"":"+") +wThisMonth+" kg":"—",c:wThisMonth!=null?(wThisMonth<=0?T.success:T.danger):T.muted},{l:"Totalt",v:"-"+totalLoss+" kg",c:T.accent}].map(function(s,i){return <div key={i} style={{background:sbg,border:sb2,borderRadius:8,padding:"8px 6px",textAlign:"center"}}><div style={{fontSize:8,color:T.muted,marginBottom:2}}>{s.l}</div><div style={{fontSize:14,fontWeight:800,color:s.c,fontFamily:"'JetBrains Mono'"}}>{s.v}</div></div>})}
+      </div>
+    </div>
+
+    {/* SEKTION 2: PEPTID-KURER */}
+    <div style={{marginBottom:20}}>
+      <div style={{fontSize:14,fontWeight:800,color:T.text,marginBottom:10}}>Peptid-kurer</div>
+      {/* Paus-varningar */}
+      {pausWarnings.length>0&&<div style={{marginBottom:10}}>
+        {pausWarnings.map(function(w,i){return <div key={i} style={{background:T.warning+"15",border:"1px solid "+T.warning+"33",borderRadius:8,padding:"8px 12px",marginBottom:4,display:"flex",alignItems:"center",gap:8}}>
+          <div style={{width:4,height:20,borderRadius:2,background:w.color}}/>
+          <div style={{fontSize:11,color:T.warning,fontWeight:700}}>⚠ {w.name} paus om {w.days} dag{w.days>1?"ar":""}</div>
+          <div style={{fontSize:9,color:T.subtle,marginLeft:"auto"}}>{w.date}</div>
+        </div>})}
+      </div>}
+      {PEPTIDE_CYCLES.map(function(c){
+        var st=getCycleStatus(c);
+        var badge=st.status;
+        var badgeColor=badge==="AKTIV"?T.success:badge==="PAUS"?T.warning:T.subtle;
+        var curDose=getCurrentDose(c);
+        var ov=pc.overrides&&pc.overrides[c.id];
+        return <div key={c.id} style={{background:sbg,border:sb2,borderRadius:10,padding:12,marginBottom:6}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <div style={{width:4,height:28,borderRadius:2,background:c.color}}/>
+              <div><div style={{fontSize:13,fontWeight:700}}>{c.name}</div><div style={{fontSize:10,color:T.subtle}}>{c.note}</div></div>
+            </div>
+            <div style={{display:"flex",alignItems:"center",gap:4}}>
+              <span style={{fontSize:8,fontWeight:800,padding:"3px 8px",borderRadius:4,background:badgeColor+"18",color:badgeColor,border:"1px solid "+badgeColor+"33"}}>{badge}</span>
+              <button onClick={function(e){e.stopPropagation();setEditPep(editPep===c.id?null:c.id)}} style={{background:"none",border:"none",cursor:"pointer",padding:2}}><Ic n="edit" s={13} c={T.subtle}/></button>
+            </div>
+          </div>
+          {/* Current phase + dose */}
+          {st.phaseName&&<div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
+            <span style={{fontSize:9,fontWeight:700,padding:"2px 6px",borderRadius:4,background:c.color+"18",color:c.color}}>{st.phaseName}</span>
+            <span style={{fontSize:10,color:T.muted,fontFamily:"'JetBrains Mono'"}}>{curDose}</span>
+          </div>}
+          {/* Maintenance dose info */}
+          {c.maintenanceDose&&st.status==="AKTIV"&&<div style={{fontSize:9,color:T.accent2,marginBottom:4}}>Underhåll: {c.maintenanceDose}</div>}
+          {/* Progress bar for cycles */}
+          {st.status!=="KOMMANDE"&&st.total!=null&&<div>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:T.muted,marginBottom:3}}>
+              <span>Dag {st.dayNum} av {st.total}</span>
+              {st.daysLeft!=null&&st.daysLeft>0&&<span>{st.daysLeft}d kvar</span>}
+            </div>
+            <div style={{height:5,borderRadius:3,background:T.surface,overflow:"hidden"}}>
+              <div style={{height:"100%",borderRadius:3,background:c.color,width:st.progress+"%",transition:"width .3s"}}/>
+            </div>
+          </div>}
+          {st.status!=="KOMMANDE"&&st.total==null&&<div style={{fontSize:10,color:T.muted}}>Dag {st.dayNum} — löpande</div>}
+          {st.status==="KOMMANDE"&&<div style={{fontSize:10,color:T.subtle}}>Startar {c.start} (om {st.daysLeft}d)</div>}
+          <div style={{fontSize:9,color:T.subtle,marginTop:4}}>Start: {c.start}{c.pauseDate?" → Paus: "+c.pauseDate:""}</div>
+          {/* Edit modal inline */}
+          {editPep===c.id&&<PepEditPanel c={c} ov={ov} st={st} onSave={savePepOverride} onClose={function(){setEditPep(null)}}/>}
+        </div>
+      })}
+    </div>
+
+    {/* SEKTION 3: VIAL-TRACKER */}
+    <div style={{marginBottom:20}}>
+      <div style={{fontSize:14,fontWeight:800,color:T.text,marginBottom:10}}>Vial-tracker</div>
+      {vials.map(function(v){
+        var autoMl=autoCalcVial(v);
+        var pct=v.totalMl>0?Math.round(autoMl/v.totalMl*100):0;
+        var low=pct<20;
+        var hasDoses=v.doses&&v.doses.length>0;
+        return <div key={v.id} style={{background:sbg,border:low?"1px solid "+T.danger+"44":sb2,borderRadius:10,padding:12,marginBottom:6,cursor:"pointer"}} onClick={function(){setEditVial(v.id);setVialInput(String(autoMl))}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <div style={{width:4,height:22,borderRadius:2,background:v.color}}/>
+              <span style={{fontSize:13,fontWeight:700}}>{v.name}</span>
+            </div>
+            <div style={{textAlign:"right"}}>
+              <div style={{fontSize:11,fontWeight:700,fontFamily:"'JetBrains Mono'",color:low?T.danger:T.text}}>{autoMl}ml <span style={{color:T.subtle,fontWeight:400}}>/ {v.totalMl}ml</span></div>
+              <div style={{fontSize:9,color:T.subtle}}>{v.cost} kr{hasDoses?" · auto":""}</div>
+            </div>
+          </div>
+          <div style={{height:5,borderRadius:3,background:T.surface,overflow:"hidden"}}>
+            <div style={{height:"100%",borderRadius:3,background:low?T.danger:v.color,width:pct+"%",transition:"width .3s"}}/>
+          </div>
+          {low&&<div style={{fontSize:10,color:T.danger,fontWeight:700,marginTop:4}}>⚠ Beställ snart!</div>}
+          {editVial===v.id&&<div onClick={function(e){e.stopPropagation()}} style={{display:"flex",gap:6,marginTop:8}}>
+            <input value={vialInput} onChange={function(e){setVialInput(e.target.value)}} type="number" inputMode="decimal" step="0.1" autoFocus style={{flex:1,padding:"8px 10px",borderRadius:6,border:"1px solid "+T.accent+"44",background:T.surface,color:T.text,fontSize:13,fontFamily:"'JetBrains Mono'",outline:"none"}}/>
+            <button onClick={function(e){e.stopPropagation();updateVial(v.id)}} style={{padding:"8px 14px",borderRadius:6,border:"none",background:T.accent,color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer"}}>OK</button>
+            <button onClick={function(e){e.stopPropagation();setEditVial(null)}} style={{padding:"8px 10px",borderRadius:6,border:sb2,background:"transparent",color:T.subtle,fontSize:11,cursor:"pointer"}}>✕</button>
+          </div>}
+        </div>
+      })}
+    </div>
+
+    {/* SEKTION 4: STATS & GRAFER */}
+    <div style={{marginBottom:20}}>
+      <div style={{fontSize:14,fontWeight:800,color:T.text,marginBottom:10}}>Stats</div>
+      {/* Streak */}
+      <div style={{background:"linear-gradient(135deg,"+T.success+"15,"+T.success+"05)",border:"1px solid "+T.success+"33",borderRadius:10,padding:14,marginBottom:10,textAlign:"center"}}>
+        <div style={{fontSize:10,color:T.success,fontWeight:700,marginBottom:2}}>STREAK</div>
+        <div style={{fontSize:28,fontWeight:900,fontFamily:"'JetBrains Mono'",color:T.success}}>{comp.streak}<span style={{fontSize:12,fontWeight:400,color:T.muted}}> dagar</span></div>
+        <div style={{fontSize:10,color:T.subtle}}>Dagar i rad med allt bockat</div>
+      </div>
+      {/* Weekly compliance bars */}
+      <div style={{background:sbg,border:sb2,borderRadius:10,padding:14,marginBottom:10}}>
+        <div style={{fontSize:10,fontWeight:700,color:T.muted,marginBottom:8}}>Vecko-compliance (senaste 4v)</div>
+        <div style={{display:"flex",gap:8,alignItems:"flex-end",height:50}}>
+          {comp.weeks.map(function(w,i){return <div key={i} style={{flex:1,textAlign:"center"}}>
+            <div style={{height:40,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+              <div style={{width:"100%",height:Math.max(3,w.pct*0.4),borderRadius:3,background:w.pct>=80?T.success:w.pct>=50?T.warning:T.danger,transition:"height .3s"}}/>
+            </div>
+            <div style={{fontSize:10,fontWeight:700,fontFamily:"'JetBrains Mono'",color:T.text,marginTop:3}}>{w.pct}%</div>
+            <div style={{fontSize:8,color:T.subtle}}>{w.label}</div>
+          </div>})}
+        </div>
+      </div>
+      {/* Recovery trend */}
+      {recoveryData.length>1&&<div>
+        <MiniGraph data={recoveryData} color={T.accent} h={50} label="Recovery (Readiness)" markers={PEPTIDE_MARKERS}/>
+      </div>}
+    </div>
+
+    {/* SEKTION 5: FOTOLOGG */}
+    <div style={{marginBottom:20}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+        <div style={{fontSize:14,fontWeight:800,color:T.text}}>Progressfoto</div>
+        {needsPhoto&&<span style={{fontSize:9,fontWeight:700,padding:"3px 8px",borderRadius:4,background:T.warning+"18",color:T.warning,border:"1px solid "+T.warning+"33"}}>📸 Dags!</span>}
+      </div>
+      {needsPhoto&&<div style={{background:T.warning+"10",border:"1px solid "+T.warning+"22",borderRadius:8,padding:"8px 12px",marginBottom:8,fontSize:11,color:T.warning,fontWeight:600}}>
+        {photoLog.length===0?"Inget foto loggat ännu — ta ditt första!":"Över 14 dagar sedan senaste fotot — dags att ta nytt!"}
+      </div>}
+      <div style={{background:sbg,border:sb2,borderRadius:10,padding:12,marginBottom:8}}>
+        <div style={{fontSize:9,color:T.muted,marginBottom:6}}>Logga att du tagit progressfoto (spara bilden i telefonens album)</div>
+        <div style={{display:"flex",gap:6}}>
+          <input value={photoDate} onChange={function(e){setPhotoDate(e.target.value)}} type="date" style={{width:110,padding:"8px 6px",borderRadius:6,border:sb2,background:T.surface,color:T.text,fontSize:11,fontFamily:"'JetBrains Mono'",outline:"none"}}/>
+          <input value={photoNote} onChange={function(e){setPhotoNote(e.target.value)}} placeholder="Notering (valfritt)" style={{flex:1,padding:"8px 10px",borderRadius:6,border:sb2,background:T.surface,color:T.text,fontSize:11,outline:"none"}}/>
+          <button onClick={savePhotoEntry} style={{padding:"8px 12px",borderRadius:6,border:"none",background:"linear-gradient(135deg,"+T.accent+","+T.accent2+")",color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer"}}>📸</button>
+        </div>
+      </div>
+      {photoLog.length>0&&<div style={{background:sbg,border:sb2,borderRadius:10,padding:12}}>
+        <div style={{fontSize:9,color:T.muted,marginBottom:6}}>Loggade foton ({photoLog.length}st)</div>
+        {photoLog.slice().reverse().slice(0,10).map(function(p,i){
+          var daysBetween=i<photoLog.length-1?(function(){
+            var rev=photoLog.slice().reverse();
+            if(i+1<rev.length){return Math.abs(Math.floor((new Date(rev[i].date)-new Date(rev[i+1].date))/86400000))}return null})():null;
+          return <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:i<9?"1px solid "+T.border+"44":"none"}}>
+            <div style={{fontSize:16,flexShrink:0}}>📸</div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:11,fontWeight:600,color:T.text}}>{p.note||"Progressfoto"}</div>
+              {daysBetween!=null&&<div style={{fontSize:9,color:T.subtle}}>{daysBetween}d sedan förra</div>}
+            </div>
+            <div style={{fontSize:9,color:T.subtle,fontFamily:"'JetBrains Mono'",flexShrink:0}}>{p.date}</div>
+            <button onClick={function(){removePhotoEntry(p.id)}} style={{background:"none",border:"none",cursor:"pointer",padding:2}}><Ic n="x" s={12} c={T.subtle}/></button>
+          </div>
+        })}
+      </div>}
+    </div>
+
+    {/* SEKTION 6: DOS-HISTORIK */}
+    {pc.history&&pc.history.length>0&&<div style={{marginBottom:20}}>
+      <div style={{fontSize:14,fontWeight:800,color:T.text,marginBottom:10}}>Dos-historik</div>
+      <div style={{background:sbg,border:sb2,borderRadius:10,padding:12}}>
+        {pc.history.slice().reverse().slice(0,15).map(function(h,i){
+          var cyc=PEPTIDE_CYCLES.find(function(c){return c.id===h.pepId});
+          var col=cyc?cyc.color:T.muted;
+          var name=cyc?cyc.name:h.pepId;
+          return <div key={i} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:i<14?"1px solid "+T.border+"44":"none"}}>
+            <div style={{width:3,height:18,borderRadius:2,background:col,flexShrink:0}}/>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:11,fontWeight:600,color:T.text}}>{name}</div>
+              <div style={{fontSize:10,color:T.muted}}>{h.action||"—"}</div>
+            </div>
+            <div style={{fontSize:9,color:T.subtle,fontFamily:"'JetBrains Mono'",flexShrink:0}}>{h.date}</div>
+          </div>
+        })}
+      </div>
+    </div>}
+  </div>);
+}
+
+function TabInfo({items,saveItems,setModal,trackerData,saveTracker,checks,ouraCache,pepConfig,savePepConfig}){
   const[sub,setSub]=useState("info");
   const[sel,setSel]=useState(null);
   var cats=[{k:"Peptider",items:Object.entries(INFO_DATA).filter(([,v])=>v.cat==="Peptider")},{k:"Kosttillskott",items:Object.entries(INFO_DATA).filter(([,v])=>v.cat==="Kosttillskott")},{k:"Hudvård",items:Object.entries(INFO_DATA).filter(([,v])=>v.cat==="Hudvård")}];
@@ -365,7 +886,7 @@ function TabInfo({items,saveItems,setModal}){
   return(<div style={{padding:"14px 18px 100px",animation:"fi .2s ease-out"}}>
     <div style={{fontSize:20,fontWeight:800,marginBottom:14}}>Info</div>
     <div style={{display:"flex",gap:3,marginBottom:14}}>
-      {[{k:"info",l:"Substanser"},{k:"timeline",l:"Tidslinje"},{k:"routines",l:"Rutiner"},{k:"oura",l:"Oura"}].map(function(s){return <button key={s.k} onClick={function(){setSub(s.k)}} style={{flex:1,padding:"7px 0",borderRadius:8,border:sub===s.k?"1px solid "+T.accent:"1px solid "+T.border,background:sub===s.k?"rgba(108,92,231,0.1)":T.card,color:sub===s.k?T.accent:T.muted,fontSize:10,fontWeight:600,cursor:"pointer"}}>{s.l}</button>})}
+      {[{k:"info",l:"Substanser"},{k:"timeline",l:"Tidslinje"},{k:"routines",l:"Rutiner"},{k:"oura",l:"Oura"},{k:"tracker",l:"Tracker"}].map(function(s){return <button key={s.k} onClick={function(){setSub(s.k)}} style={{flex:1,padding:"7px 0",borderRadius:8,border:sub===s.k?"1px solid "+T.accent:"1px solid "+T.border,background:sub===s.k?"rgba(108,92,231,0.1)":T.card,color:sub===s.k?T.accent:T.muted,fontSize:10,fontWeight:600,cursor:"pointer"}}>{s.l}</button>})}
     </div>
     {sub==="info"&&<div>
       {cats.map(cat=><div key={cat.k} style={{marginBottom:20}}>
@@ -380,6 +901,7 @@ function TabInfo({items,saveItems,setModal}){
     {sub==="timeline"&&<TabPlan/>}
     {sub==="routines"&&<TabRoutines items={items} saveItems={saveItems} setModal={setModal}/>}
     {sub==="oura"&&<OuraPanel/>}
+    {sub==="tracker"&&<TrackerPanel trackerData={trackerData} saveTracker={saveTracker} checks={checks} items={items} ouraCache={ouraCache} pepConfig={pepConfig} savePepConfig={savePepConfig}/>}
   </div>);
 }
 
@@ -390,6 +912,54 @@ var PEPTIDE_MARKERS=[
   {date:"05-09",name:"Semax paus",color:"#00cec9"},
   {date:"05-23",name:"BPC+TB paus",color:"#00b894"}
 ];
+
+var PEPTIDE_CYCLES=[
+  {id:"reta",name:"Retatrutide",color:"#6c5ce7",start:"2026-03-28",cycleLen:null,pauseDate:null,
+    phases:[{name:"Upptrappning",dose:"1mg→2mg→4mg/v",startDay:0,endDay:21},{name:"Full dos",dose:"4mg/v",startDay:22,endDay:null},{name:"Underhåll",dose:"2mg/v",trigger:"vid mål"}],
+    maintenanceDose:"2mg/v",note:"Kör tills mål → nedtrappning"},
+  {id:"cagri",name:"Cagrilintide",color:"#6c5ce7",start:"2026-03-28",cycleLen:null,pauseDate:null,
+    phases:[{name:"Full dos",dose:"1mg/v",startDay:0,endDay:null},{name:"Underhåll",dose:"0.5mg/v",trigger:"vid mål"}],
+    maintenanceDose:"0.5mg/v",note:"Följer Retatrutide"},
+  {id:"semax",name:"Semax",color:"#00cec9",start:"2026-03-28",cycleLen:42,pauseDate:"2026-05-09",
+    phases:[{name:"Full dos",dose:"600mcg/dag",startDay:0,endDay:42},{name:"Paus",dose:"—",startDay:43,endDay:56}],
+    maintenanceDose:null,note:"6v på / 2v av — cykliskt"},
+  {id:"frag",name:"HGH Fragment",color:"#ff6b6b",start:"2026-03-28",cycleLen:null,pauseDate:null,
+    phases:[{name:"Full dos",dose:"750mcg/dag",startDay:0,endDay:null},{name:"Underhåll",dose:"250mcg/dag",trigger:"vid mål"}],
+    maintenanceDose:"250mcg/dag",note:"Löpande tills mål"},
+  {id:"ghkcu",name:"GHK-Cu",color:"#fdcb6e",start:"2026-03-28",cycleLen:null,pauseDate:null,
+    phases:[{name:"Full dos",dose:"3.33mg mån-lör",startDay:0,endDay:null}],
+    maintenanceDose:null,note:"6/1 — söndag vila"},
+  {id:"bpctb",name:"BPC+TB500",color:"#00b894",start:"2026-03-28",cycleLen:56,pauseDate:"2026-05-23",
+    phases:[{name:"Full dos",dose:"667mcg varannan dag",startDay:0,endDay:56},{name:"Paus 4v",dose:"—",startDay:57,endDay:84},{name:"Cykel 2",dose:"667mcg varannan dag",startDay:85,endDay:null}],
+    maintenanceDose:null,note:"8v på / 4v av"},
+  {id:"epi",name:"Epitalon",color:"#e84393",start:"2026-04-15",cycleLen:10,pauseDate:null,
+    phases:[{name:"Kur 1",dose:"5mg/dag 10d",startDay:0,endDay:10},{name:"Paus till sep",dose:"—",startDay:11,endDay:null}],
+    maintenanceDose:null,note:"2 kurer/år"},
+  {id:"cjcipa",name:"CJC+Ipa",color:"#0984e3",start:"2026-05-01",cycleLen:84,pauseDate:"2026-07-23",
+    phases:[{name:"Full dos",dose:"1x/v kväll",startDay:0,endDay:84},{name:"Paus 4-6v",dose:"—",startDay:85,endDay:null}],
+    maintenanceDose:null,note:"12v på, paus juli"}
+];
+
+var DEFAULT_TRACKER={
+  weight:[],
+  startWeight:108,
+  goalWeight:68,
+  vials:[
+    {id:"v-reta",name:"Retatrutide",totalMl:3,remainingMl:3,cost:3200,color:"#6c5ce7",doses:[{itemId:"pep-reta",ml:0.30}],resetDate:"2026-03-28",mlAtReset:3},
+    {id:"v-semax",name:"Semax",totalMl:3,remainingMl:3,cost:800,color:"#00cec9",doses:[{itemId:"pep-semax",ml:0.06}],resetDate:"2026-03-28",mlAtReset:3},
+    {id:"v-frag",name:"Fragment",totalMl:2,remainingMl:2,cost:480,color:"#ff6b6b",doses:[{itemId:"pep-frag-am",ml:0.20},{itemId:"pep-frag-pre",ml:0.10}],resetDate:"2026-03-28",mlAtReset:2},
+    {id:"v-ghkcu",name:"GHK-Cu",totalMl:3,remainingMl:3,cost:480,color:"#fdcb6e",doses:[{itemId:"pep-ghkcu",ml:0.10}],resetDate:"2026-03-28",mlAtReset:3},
+    {id:"v-bpc",name:"BPC-157",totalMl:3,remainingMl:3,cost:640,color:"#00b894",doses:[{itemId:"pep-bpc",ml:0.10}],resetDate:"2026-03-28",mlAtReset:3},
+    {id:"v-tb500",name:"TB-500",totalMl:3,remainingMl:3,cost:640,color:"#00b894",doses:[{itemId:"pep-tb500",ml:0.10}],resetDate:"2026-03-28",mlAtReset:3},
+    {id:"v-epi",name:"Epitalon",totalMl:1,remainingMl:1,cost:640,color:"#e84393",doses:[],resetDate:"2026-04-15",mlAtReset:1},
+    {id:"v-cjcipa",name:"CJC+Ipa",totalMl:1,remainingMl:1,cost:480,color:"#0984e3",doses:[],resetDate:"2026-05-01",mlAtReset:1}
+  ]
+};
+
+var DEFAULT_PEPTIDE_CONFIG={
+  overrides:{},
+  history:[]
+};
 
 function MiniGraph({data,color,h,label,markers}){
   if(!data||!data.length)return null;
@@ -479,18 +1049,20 @@ function OuraPanel(){
       var end=new Date();
       var start=new Date();start.setDate(start.getDate()-range);
       var sd=dk(start),ed=dk(end);
-      var proxy="https://corsproxy.io/?";
-      var base="https://api.ouraring.com/v2/usercollection/";
-      var headers={"Authorization":"Bearer "+token};
-      function pf(url){return fetch(proxy+url,{headers:headers}).then(function(r){if(!r.ok)throw new Error(r.status+" "+r.statusText+" — kolla att token är korrekt");return r.json()})}
+      // Ändra PROXY_URL till din deployade Vercel-proxy URL
+      var PROXY_URL="https://oura-proxy.vercel.app/api/oura";
+      function pf(endpoint,params){
+        var url=PROXY_URL+"?endpoint="+endpoint+"&token="+token+"&"+params;
+        return fetch(url).then(function(r){if(!r.ok)throw new Error(r.status+" — kolla token/proxy");return r.json()})
+      }
 
       var results=await Promise.all([
-        pf(base+"daily_readiness?start_date="+sd+"&end_date="+ed),
-        pf(base+"daily_sleep?start_date="+sd+"&end_date="+ed),
-        pf(base+"daily_activity?start_date="+sd+"&end_date="+ed),
-        pf(base+"heart_rate?start_date="+sd+"T00:00:00&end_date="+ed+"T23:59:59"),
-        pf(base+"workout?start_date="+sd+"&end_date="+ed),
-        pf(base+"sleep?start_date="+sd+"&end_date="+ed)
+        pf("daily_readiness","start_date="+sd+"&end_date="+ed),
+        pf("daily_sleep","start_date="+sd+"&end_date="+ed),
+        pf("daily_activity","start_date="+sd+"&end_date="+ed),
+        pf("heart_rate","start_date="+sd+"T00:00:00&end_date="+ed+"T23:59:59"),
+        pf("workout","start_date="+sd+"&end_date="+ed),
+        pf("sleep","start_date="+sd+"&end_date="+ed)
       ]);
 
       var readiness=results[0].data||[];
@@ -1169,14 +1741,65 @@ function TabEconomy({ecoData,saveEco}){
         <Ic n="edit" s={14} c={T.muted}/>
       </div>
 
-      {/* Kvar att spendera */}
-      <div style={{background:T.card,border:"1px solid "+(rorligLeft>=0?T.success+"33":T.danger+"33"),borderRadius:12,padding:"12px 16px",marginBottom:10}}>
-        <div style={{fontSize:9,fontWeight:700,color:T.muted,marginBottom:2}}>Kvar att spendera</div>
-        <div style={{fontSize:22,fontWeight:900,color:rorligLeft>=0?T.success:T.danger,fontFamily:"'JetBrains Mono'",lineHeight:1.2}}>{rorligLeft.toLocaleString("sv")} kr</div>
-        <div style={{height:6,background:T.surface,borderRadius:3,marginTop:6,overflow:"hidden"}}>
-          <div style={{height:"100%",width:Math.min(100,rorligSpent/(budget.monthly||4000)*100)+"%",background:rorligLeft>=0?T.success:T.danger,borderRadius:3,transition:"width .3s"}}/>
+      {/* Likvida medel — kompakt */}
+      {(function(){
+        var now2=new Date();
+        var allDates={};
+        for(var k in entries)(entries[k]||[]).forEach(function(e){if(!allDates[k])allDates[k]={inc:0,exp:0};allDates[k].exp+=e.amount});
+        for(var k in incomeData)(incomeData[k]||[]).forEach(function(i){if(!allDates[k])allDates[k]={inc:0,exp:0};allDates[k].inc+=i.amount});
+        // 7-day daily net
+        var weekData=[];
+        for(var i=6;i>=0;i--){var dd=new Date(now2);dd.setDate(dd.getDate()-i);var ds=dk(dd);var ad=allDates[ds];weekData.push({v:ad?((ad.inc||0)-(ad.exp||0)):0})}
+        var weekNet=weekData.reduce(function(s,d){return s+d.v},0);
+        // 30-day running liquidity
+        var mData=[];var runL=baseLiq;var sortedD=Object.keys(allDates).sort();
+        var d30=dk(new Date(now2.getTime()-30*86400000));
+        sortedD.forEach(function(d){if(d<d30){runL+=(allDates[d].inc||0)-(allDates[d].exp||0)}});
+        for(var i=30;i>=0;i--){var dd=new Date(now2);dd.setDate(dd.getDate()-i);var ds=dk(dd);var ad=allDates[ds];if(ad)runL+=(ad.inc||0)-(ad.exp||0);mData.push({v:runL})}
+        var mNet=mData.length>1?mData[mData.length-1].v-mData[0].v:0;
+        // 12-month net
+        var yData=[];
+        for(var m=0;m<12;m++){var mK=m+1,mi=0,me=0;
+          for(var k in incomeData){var ps=k.split("-");if(Number(ps[0])===now2.getFullYear()&&Number(ps[1])===mK)(incomeData[k]||[]).forEach(function(i){mi+=i.amount})}
+          for(var k in entries){var ps=k.split("-");if(Number(ps[0])===now2.getFullYear()&&Number(ps[1])===mK)(entries[k]||[]).forEach(function(e){me+=e.amount})}
+          yData.push({v:mi-me})}
+        var yNet=yData.reduce(function(s,d){return s+d.v},0);
+        // Sparkline
+        function Sp(props){
+          var data=props.data,color=props.color,w=props.w||90,h=props.h||20;
+          if(!data||data.length<2)return <div style={{height:h}}/>;
+          var vals=data.map(function(d){return d.v});
+          var mn=Math.min.apply(null,vals),mx=Math.max.apply(null,vals);
+          if(mx===mn)mx=mn+1;
+          var pts=data.map(function(d,i){return Math.round(i/(data.length-1)*w)+","+Math.round(h-1-(d.v-mn)/(mx-mn)*(h-2))});
+          return <svg width={w} height={h} style={{display:"block"}}><path d={"M"+pts.join("L")} fill="none" stroke={color} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" opacity="0.8"/></svg>
+        }
+        return <div style={{display:"flex",gap:3,marginBottom:6}}>
+          {[{l:"7d",net:weekNet,data:weekData,c:weekNet>=0?T.success:T.danger},
+            {l:"30d",net:mNet,data:mData,c:T.accent2},
+            {l:now2.getFullYear(),net:yNet,data:yData,c:yNet>=0?T.success:T.danger}
+          ].map(function(b,i){return <div key={i} style={{flex:1,background:T.card,border:"1px solid "+T.border,borderRadius:6,padding:"4px 6px",overflow:"hidden"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span style={{fontSize:6,color:T.subtle}}>{b.l}</span>
+              <span style={{fontSize:9,fontWeight:800,color:b.c,fontFamily:"'JetBrains Mono'"}}>{b.net>=0?"+":""}{b.net.toLocaleString("sv")}</span>
+            </div>
+            <Sp data={b.data} color={b.c} w={100} h={18}/>
+          </div>})}
+        </div>;
+      })()}
+
+      {/* Kvar att spendera — kompakt */}
+      <div style={{display:"flex",alignItems:"center",gap:10,background:T.card,border:"1px solid "+(rorligLeft>=0?T.success+"22":T.danger+"22"),borderRadius:8,padding:"8px 12px",marginBottom:8}}>
+        <div style={{flex:1}}>
+          <div style={{fontSize:7,color:T.muted}}>Kvar att spendera</div>
+          <div style={{fontSize:16,fontWeight:900,color:rorligLeft>=0?T.success:T.danger,fontFamily:"'JetBrains Mono'",lineHeight:1.2}}>{rorligLeft.toLocaleString("sv")} kr</div>
         </div>
-        <div style={{fontSize:8,color:T.subtle,marginTop:4}}>av {(budget.monthly||4000).toLocaleString("sv")} kr · resetas {budget.resetDay||25}:e varje mån</div>
+        <div style={{width:80}}>
+          <div style={{height:4,background:T.surface,borderRadius:2,overflow:"hidden"}}>
+            <div style={{height:"100%",width:Math.min(100,rorligSpent/(budget.monthly||4000)*100)+"%",background:rorligLeft>=0?T.success:T.danger,borderRadius:2}}/>
+          </div>
+          <div style={{fontSize:7,color:T.subtle,marginTop:2,textAlign:"right"}}>{(budget.monthly||4000).toLocaleString("sv")} · d{budget.resetDay||25}</div>
+        </div>
       </div>
 
       {/* Dagssummering */}
@@ -1442,6 +2065,8 @@ function App(){
   const[modal,setModal]=useState(null);
   const[tab,setTab]=useState("today");
   const[ouraCache,setOuraCache]=useState(null);
+  const[trackerData,setTrackerData]=useState(DEFAULT_TRACKER);
+  const[pepConfig,setPepConfig]=useState(DEFAULT_PEPTIDE_CONFIG);
   const skipRef=useRef(false);
 
   useEffect(()=>{(async()=>{try{
@@ -1459,14 +2084,22 @@ function App(){
     else{await sb.from('health_data').upsert({id:'calendar',data:{events:[],tasks:[],recurring:[]},updated_at:new Date().toISOString()})}
     var r5=await sb.from('health_data').select('data').eq('id','oura').single();
     if(r5.data&&r5.data.data&&r5.data.data.cached)setOuraCache(r5.data.data.cached);
+    var r6=await sb.from('health_data').select('data').eq('id','tracker').single();
+    if(r6.data&&r6.data.data)setTrackerData(r6.data.data);
+    else{await sb.from('health_data').upsert({id:'tracker',data:DEFAULT_TRACKER,updated_at:new Date().toISOString()})}
+    var r7=await sb.from('health_data').select('data').eq('id','peptide_config').single();
+    if(r7.data&&r7.data.data)setPepConfig(r7.data.data);
+    else{await sb.from('health_data').upsert({id:'peptide_config',data:DEFAULT_PEPTIDE_CONFIG,updated_at:new Date().toISOString()})}
   }catch(e){setItems(DEFAULT_ITEMS);setChecks({})}setLoading(false)})()},[]);
 
-  useEffect(()=>{try{var ch=sb.channel('health-sync').on('postgres_changes',{event:'*',schema:'public',table:'health_data'},payload=>{if(!skipRef.current&&payload.new){if(payload.new.id==='config'&&payload.new.data&&payload.new.data.items)setItems(payload.new.data.items);if(payload.new.id==='checks'&&payload.new.data)setChecks(payload.new.data);if(payload.new.id==='economy'&&payload.new.data)setEcoData(payload.new.data);if(payload.new.id==='calendar'&&payload.new.data)setCalData(payload.new.data);if(payload.new.id==='oura'&&payload.new.data&&payload.new.data.cached)setOuraCache(payload.new.data.cached)}skipRef.current=false}).subscribe();return()=>sb.removeChannel(ch)}catch(e){console.warn('Realtime disabled:',e)}},[]);
+  useEffect(()=>{try{var ch=sb.channel('health-sync').on('postgres_changes',{event:'*',schema:'public',table:'health_data'},payload=>{if(!skipRef.current&&payload.new){if(payload.new.id==='config'&&payload.new.data&&payload.new.data.items)setItems(payload.new.data.items);if(payload.new.id==='checks'&&payload.new.data)setChecks(payload.new.data);if(payload.new.id==='economy'&&payload.new.data)setEcoData(payload.new.data);if(payload.new.id==='calendar'&&payload.new.data)setCalData(payload.new.data);if(payload.new.id==='oura'&&payload.new.data&&payload.new.data.cached)setOuraCache(payload.new.data.cached);if(payload.new.id==='tracker'&&payload.new.data)setTrackerData(payload.new.data);if(payload.new.id==='peptide_config'&&payload.new.data)setPepConfig(payload.new.data)}skipRef.current=false}).subscribe();return()=>sb.removeChannel(ch)}catch(e){console.warn('Realtime disabled:',e)}},[]);
 
   const saveItems=useCallback(async(ni)=>{setItems(ni);skipRef.current=true;try{await sb.from('health_data').upsert({id:'config',data:{items:ni},updated_at:new Date().toISOString()})}catch(e){console.error(e)}},[]);
   const saveChecks=useCallback(async(nc)=>{setChecks(nc);skipRef.current=true;try{await sb.from('health_data').upsert({id:'checks',data:nc,updated_at:new Date().toISOString()})}catch(e){console.error(e)}},[]);
   const saveEco=useCallback(async(ne)=>{setEcoData(ne);skipRef.current=true;try{await sb.from('health_data').upsert({id:'economy',data:ne,updated_at:new Date().toISOString()})}catch(e){console.error(e)}},[]);
   const saveCal=useCallback(async(nc)=>{setCalData(nc);skipRef.current=true;try{await sb.from('health_data').upsert({id:'calendar',data:nc,updated_at:new Date().toISOString()})}catch(e){console.error(e)}},[]);
+  const saveTracker=useCallback(async(nt)=>{setTrackerData(nt);skipRef.current=true;try{await sb.from('health_data').upsert({id:'tracker',data:nt,updated_at:new Date().toISOString()})}catch(e){console.error(e)}},[]);
+  const savePepConfig=useCallback(async(np)=>{setPepConfig(np);skipRef.current=true;try{await sb.from('health_data').upsert({id:'peptide_config',data:np,updated_at:new Date().toISOString()})}catch(e){console.error(e)}},[]);
 
   function toggleCheck(id){var nc={...checks},d=dk(selDate);if(!nc[d])nc[d]={};nc[d][id]=!nc[d][id];if(!nc[d][id])delete nc[d][id];saveChecks(nc)}
   function toggleAllSlot(ids,check){var nc={...checks},d=dk(selDate);if(!nc[d])nc[d]={};ids.forEach(function(id){if(check)nc[d][id]=true;else delete nc[d][id]});saveChecks(nc)}
@@ -1477,9 +2110,9 @@ function App(){
   if(loading||!items)return <div style={{minHeight:"100vh",background:T.bg,display:"flex",alignItems:"center",justifyContent:"center",color:T.muted}}>Laddar...</div>;
 
   return(<div style={{minHeight:"100vh",background:T.bg,color:T.text,maxWidth:480,margin:"0 auto"}}>
-    {tab==="today"&&<TabToday items={items} checks={checks} selDate={selDate} setSelDate={setSelDate} toggleCheck={toggleCheck} toggleAllSlot={toggleAllSlot} ouraCache={ouraCache}/>}
+    {tab==="today"&&<TabToday items={items} checks={checks} selDate={selDate} setSelDate={setSelDate} toggleCheck={toggleCheck} toggleAllSlot={toggleAllSlot} ouraCache={ouraCache} calData={calData} pepConfig={pepConfig} trackerData={trackerData}/>}
     {tab==="calendar"&&<TabCalendar calData={calData} saveCal={saveCal} ouraCache={ouraCache}/>}
-    {tab==="info"&&<TabInfo items={items} saveItems={saveItems} setModal={setModal}/>}
+    {tab==="info"&&<TabInfo items={items} saveItems={saveItems} setModal={setModal} trackerData={trackerData} saveTracker={saveTracker} checks={checks} ouraCache={ouraCache} pepConfig={pepConfig} savePepConfig={savePepConfig}/>}
     {tab==="economy"&&<TabEconomy ecoData={ecoData} saveEco={saveEco}/>}
 
     <nav style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,display:"flex",justifyContent:"space-around",padding:"8px 0 12px",borderTop:"1px solid "+T.border,background:"rgba(10,10,15,0.97)",backdropFilter:"blur(20px)",zIndex:50}}>
