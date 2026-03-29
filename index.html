@@ -267,7 +267,7 @@ function TabToday({items,checks,selDate,setSelDate,toggleCheck,toggleAllSlot,our
         </div>
       </div>
     })()}
-    <div style={{padding:"0 18px 100px"}}>{SO.map(slot=>{var si=grouped[slot];if(!si||!si.length)return null;var sc=si.filter(i=>dayC[i.id]).length,allD=sc===si.length;var ids=si.map(function(i){return i.id});return(<div key={slot} style={{marginBottom:16}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}><div style={{fontSize:11,fontWeight:700,color:allD?T.success:T.accent}}>{SL[slot]}</div><div style={{display:"flex",alignItems:"center",gap:6}}><button onClick={function(){toggleAllSlot(ids,!allD)}} style={{padding:"2px 8px",borderRadius:4,border:"1px solid "+(allD?T.success+"44":T.border),background:allD?T.success+"12":"transparent",color:allD?T.success:T.muted,fontSize:8,fontWeight:700,cursor:"pointer"}}>{allD?"✓ Alla":"Bocka alla"}</button><div style={{fontSize:9,color:T.subtle,fontFamily:"'JetBrains Mono',monospace"}}>{sc}/{si.length}</div></div></div>{si.map(item=><ItemRow key={item.id} item={item} checked={!!dayC[item.id]} onToggle={()=>toggleCheck(item.id)}/>)}</div>)})}
+    <div style={{padding:"0 18px 120px"}}>{SO.map(slot=>{var si=grouped[slot];if(!si||!si.length)return null;var sc=si.filter(i=>dayC[i.id]).length,allD=sc===si.length;var ids=si.map(function(i){return i.id});return(<div key={slot} style={{marginBottom:16}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}><div style={{fontSize:11,fontWeight:700,color:allD?T.success:T.accent}}>{SL[slot]}</div><div style={{display:"flex",alignItems:"center",gap:6}}><button onClick={function(){toggleAllSlot(ids,!allD)}} style={{padding:"2px 8px",borderRadius:4,border:"1px solid "+(allD?T.success+"44":T.border),background:allD?T.success+"12":"transparent",color:allD?T.success:T.muted,fontSize:8,fontWeight:700,cursor:"pointer"}}>{allD?"✓ Alla":"Bocka alla"}</button><div style={{fontSize:9,color:T.subtle,fontFamily:"'JetBrains Mono',monospace"}}>{sc}/{si.length}</div></div></div>{si.map(item=><ItemRow key={item.id} item={item} checked={!!dayC[item.id]} onToggle={()=>toggleCheck(item.id)}/>)}</div>)})}
     {/* Summera dagen */}
     <button onClick={function(){setShowSummary(!showSummary)}} style={{width:"100%",padding:14,borderRadius:12,border:"none",background:showSummary?"linear-gradient(135deg,"+T.accent+","+T.accent2+")":"linear-gradient(135deg,"+T.accent+"22,"+T.accent2+"22)",color:showSummary?"#fff":T.accent,fontSize:13,fontWeight:800,cursor:"pointer",marginTop:8,marginBottom:showSummary?10:0}}>{showSummary?"Dölj summering":"Summera dagen"}</button>
     {showSummary&&<div style={{animation:"fi .15s ease-out"}}>
@@ -873,7 +873,7 @@ function TabInfo({items,saveItems,setModal,trackerData,saveTracker,checks,ouraCa
   const[sub,setSub]=useState("info");
   const[sel,setSel]=useState(null);
   var cats=[{k:"Peptider",items:Object.entries(INFO_DATA).filter(([,v])=>v.cat==="Peptider")},{k:"Kosttillskott",items:Object.entries(INFO_DATA).filter(([,v])=>v.cat==="Kosttillskott")},{k:"Hudvård",items:Object.entries(INFO_DATA).filter(([,v])=>v.cat==="Hudvård")}];
-  if(sel){var info=INFO_DATA[sel];if(!info)return null;return(<div style={{padding:"14px 18px 100px",animation:"fi .15s ease-out"}}>
+  if(sel){var info=INFO_DATA[sel];if(!info)return null;return(<div style={{padding:"14px 18px 120px",animation:"fi .15s ease-out"}}>
     <button onClick={()=>setSel(null)} style={{display:"flex",alignItems:"center",gap:4,background:"none",border:"none",color:T.accent,fontSize:11,fontWeight:600,cursor:"pointer",marginBottom:12}}><Ic n="back" s={14} c={T.accent}/>Tillbaka</button>
     <div style={{fontSize:20,fontWeight:800,marginBottom:4}}>{info.title}</div>
     <div style={{fontSize:11,color:T.muted,marginBottom:16}}>{info.cat}</div>
@@ -883,7 +883,7 @@ function TabInfo({items,saveItems,setModal,trackerData,saveTracker,checks,ouraCa
     {info.sideEffects&&<div style={{background:T.card,border:"1px solid "+T.border,borderRadius:10,padding:14,marginBottom:10}}><div style={{fontSize:10,color:T.danger,marginBottom:6}}>Biverkningar att bevaka</div>{info.sideEffects.map((b,i)=><div key={i} style={{fontSize:12,color:T.text,padding:"3px 0",paddingLeft:12,borderLeft:"2px solid "+T.danger,marginBottom:4}}>{b}</div>)}</div>}
     {info.timeline&&<div style={{background:T.card,border:"1px solid "+T.border,borderRadius:10,padding:14,marginBottom:10}}><div style={{fontSize:10,color:T.accent,marginBottom:6}}>När ser du resultat?</div><div style={{fontSize:12,color:T.text,lineHeight:1.7}}>{info.timeline}</div></div>}
   </div>);}
-  return(<div style={{padding:"14px 18px 100px",animation:"fi .2s ease-out"}}>
+  return(<div style={{padding:"14px 18px 120px",animation:"fi .2s ease-out"}}>
     <div style={{fontSize:20,fontWeight:800,marginBottom:14}}>Info</div>
     <div style={{display:"flex",gap:3,marginBottom:14}}>
       {[{k:"info",l:"Substanser"},{k:"timeline",l:"Tidslinje"},{k:"routines",l:"Rutiner"},{k:"oura",l:"Oura"},{k:"tracker",l:"Tracker"}].map(function(s){return <button key={s.k} onClick={function(){setSub(s.k)}} style={{flex:1,padding:"7px 0",borderRadius:8,border:sub===s.k?"1px solid "+T.accent:"1px solid "+T.border,background:sub===s.k?"rgba(108,92,231,0.1)":T.card,color:sub===s.k?T.accent:T.muted,fontSize:10,fontWeight:600,cursor:"pointer"}}>{s.l}</button>})}
@@ -1365,7 +1365,7 @@ function TabCalendar({calData,saveCal,ouraCache}){
   function rmTask(id){saveCal({...cal,tasks:tasks.filter(function(t){return t.id!==id})})}
   function eventsOn(d){return events.filter(function(e){return e.date===d}).length+(showAuto?getAutoEvents(d).length:0)+getRecurringForDate(recurring,d).length+getOuraWorkouts(ouraCache,d).length}
   function tasksOn(d){return tasks.filter(function(t){return t.date===d}).length}
-  return(<div style={{padding:"14px 18px 100px",animation:"fi .2s ease-out"}}>
+  return(<div style={{padding:"14px 18px 120px",animation:"fi .2s ease-out"}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
       <div style={{fontSize:20,fontWeight:800}}>Kalender</div>
       <div style={{display:"flex",gap:3,alignItems:"center"}}>
@@ -1722,7 +1722,7 @@ function TabEconomy({ecoData,saveEco}){
   // Savings total
   var totalSaved=goals.reduce(function(s,g){return s+(g.saved||0)},0);
 
-  return(<div style={{padding:"14px 18px 100px",animation:"fi .2s ease-out"}}>
+  return(<div style={{padding:"14px 18px 120px",animation:"fi .2s ease-out"}}>
     <div style={{fontSize:20,fontWeight:800,marginBottom:14}}>Ekonomi</div>
     <div style={{display:"flex",gap:3,marginBottom:14}}>
       {[{k:"daily",l:"Daglig"},{k:"overview",l:"Översikt"},{k:"savings",l:"Sparmål"}].map(function(s){return(
@@ -2109,13 +2109,13 @@ function App(){
 
   if(loading||!items)return <div style={{minHeight:"100vh",background:T.bg,display:"flex",alignItems:"center",justifyContent:"center",color:T.muted}}>Laddar...</div>;
 
-  return(<div style={{minHeight:"100vh",background:T.bg,color:T.text,maxWidth:480,margin:"0 auto"}}>
+  return(<div style={{minHeight:"100vh",background:T.bg,color:T.text,maxWidth:480,margin:"0 auto",paddingTop:"env(safe-area-inset-top, 0px)"}}>
     {tab==="today"&&<TabToday items={items} checks={checks} selDate={selDate} setSelDate={setSelDate} toggleCheck={toggleCheck} toggleAllSlot={toggleAllSlot} ouraCache={ouraCache} calData={calData} pepConfig={pepConfig} trackerData={trackerData}/>}
     {tab==="calendar"&&<TabCalendar calData={calData} saveCal={saveCal} ouraCache={ouraCache}/>}
     {tab==="info"&&<TabInfo items={items} saveItems={saveItems} setModal={setModal} trackerData={trackerData} saveTracker={saveTracker} checks={checks} ouraCache={ouraCache} pepConfig={pepConfig} savePepConfig={savePepConfig}/>}
     {tab==="economy"&&<TabEconomy ecoData={ecoData} saveEco={saveEco}/>}
 
-    <nav style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,display:"flex",justifyContent:"space-around",padding:"8px 0 12px",borderTop:"1px solid "+T.border,background:"rgba(10,10,15,0.97)",backdropFilter:"blur(20px)",zIndex:50}}>
+    <nav style={{position:"fixed",bottom:0,left:"50%",transform:"translateX(-50%)",width:"100%",maxWidth:480,display:"flex",justifyContent:"space-around",padding:"8px 0 calc(14px + env(safe-area-inset-bottom, 0px))",borderTop:"1px solid "+T.border,background:"rgba(10,10,15,0.97)",backdropFilter:"blur(20px)",zIndex:50}}>
       {[{k:"today",n:"check",l:"Idag"},{k:"calendar",n:"calendar",l:"Kalender"},{k:"info",n:"info",l:"Info"},{k:"economy",n:"bar",l:"Ekonomi"}].map(n=>
         <button key={n.k} onClick={()=>setTab(n.k)} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:2,background:"none",border:"none",cursor:"pointer",color:tab===n.k?T.accent:T.subtle,fontSize:9,fontWeight:600}}><Ic n={n.n} s={18} c={tab===n.k?T.accent:T.subtle}/>{n.l}</button>
       )}
