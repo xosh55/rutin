@@ -115,6 +115,7 @@ var DEFAULT_ITEMS=[
   {id:"skin-pm-2",name:"Anua toner",detail:"Steg 2",category:"skincare",timeSlot:"evening-skincare",schedule:{type:"daily"},active:true},
   {id:"skin-pm-3",name:"Revox Niacinamid 10%",detail:"Steg 3",category:"skincare",timeSlot:"evening-skincare",schedule:{type:"daily"},active:true},
   {id:"skin-pm-4",name:"SKIN1004 kräm",detail:"Steg 4",category:"skincare",timeSlot:"evening-skincare",schedule:{type:"daily"},active:true},
+  {id:"photo-progress",name:"📸 Progressfoto (fram + sida)",detail:"Spara i album — jämför varje månad",category:"custom",timeSlot:"morning-fasting",badge:"Söndag",schedule:{type:"specific-days",days:[0]},active:true},
 ];
 
 function Ic({n,s=18,c=T.muted}){var P={check:"M20 6L9 17l-5-5",plus:"M12 5v14M5 12h14",x:"M18 6L6 18M6 6l12 12",edit:"M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z",trash:"M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2",calendar:"M19 4H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2zM16 2v4M8 2v4M3 10h18",layers:"M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5",bar:"M12 20V10M18 20V4M6 20v-4",chevL:"M15 18l-6-6 6-6",chevR:"M9 18l6-6-6-6",info:"M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM12 16v-4M12 8h.01",settings:"M12 15a3 3 0 100-6 3 3 0 000 6z",back:"M19 12H5M12 19l-7-7 7-7"};return <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={P[n]||""}/></svg>;}
@@ -156,17 +157,27 @@ function AddForm({onSave,onClose}){
     </div></div>);
 }
 
-function TabToday({items,checks,selDate,setSelDate,toggleCheck,saveChecks}){
+function TabToday({items,checks,selDate,setSelDate,toggleCheck,toggleAllSlot,ouraCache}){
   var d=dk(selDate),dow=selDate.getDay(),dayC=checks[d]||{};
   var training=getTraining(dow);
   var today=items.filter(i=>shouldShow(i,selDate)).concat(training);
   var grouped={};SO.forEach(s=>{grouped[s]=[]});today.forEach(i=>{var s=i.timeSlot||"morning-fasting";if(!grouped[s])grouped[s]=[];grouped[s].push(i)});
   var tot=today.length,done=today.filter(i=>dayC[i.id]).length,pct=tot>0?Math.round(done/tot*100):0;
   var isT=dk(selDate)===dk(new Date()),stackD=daysSince(SS);
+  var ouraSleep=ouraCache&&ouraCache.sleep?(ouraCache.sleep||[]).find(function(s){return s.day===d}):null;
+  var ouraReady=ouraCache&&ouraCache.readiness?(ouraCache.readiness||[]).find(function(r){return r.day===d}):null;
+  var ouraActivity=ouraCache&&ouraCache.activity?(ouraCache.activity||[]).find(function(a){return a.day===d}):null;
+  const[showSummary,setShowSummary]=useState(false);
   return(<div style={{animation:"fi .2s ease-out"}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"14px 18px 8px"}}>
       <div><div style={{fontSize:20,fontWeight:800}}>{isT?"Idag":DAYS_FULL[dow]}</div><div style={{fontSize:11,color:T.muted}}>{selDate.getDate()+" "+MONTHS_FULL[selDate.getMonth()]}{stackD>=0?" · Dag "+(stackD+1):""}</div></div>
-      <ProgressRing pct={pct}/>
+      <div style={{display:"flex",alignItems:"center",gap:8}}>
+        {(ouraSleep||ouraReady)&&<div style={{display:"flex",gap:4}}>
+          {ouraSleep&&ouraSleep.score&&<div style={{background:T.accent2+"15",border:"1px solid "+T.accent2+"33",borderRadius:6,padding:"3px 7px",textAlign:"center"}}><div style={{fontSize:7,color:T.accent2,fontWeight:700}}>SÖMN</div><div style={{fontSize:12,fontWeight:800,color:T.accent2,fontFamily:"'JetBrains Mono'"}}>{ouraSleep.score}</div></div>}
+          {ouraReady&&ouraReady.score&&<div style={{background:T.accent+"15",border:"1px solid "+T.accent+"33",borderRadius:6,padding:"3px 7px",textAlign:"center"}}><div style={{fontSize:7,color:T.accent,fontWeight:700}}>READY</div><div style={{fontSize:12,fontWeight:800,color:T.accent,fontFamily:"'JetBrains Mono'"}}>{ouraReady.score}</div></div>}
+        </div>}
+        <ProgressRing pct={pct}/>
+      </div>
     </div>
     <div style={{display:"flex",alignItems:"center",gap:4,padding:"0 18px 8px"}}>
       <button onClick={()=>{var n=new Date(selDate);n.setDate(n.getDate()-1);setSelDate(n)}} style={{background:"none",border:"none",cursor:"pointer",padding:4}}><Ic n="chevL" s={16} c={T.muted}/></button>
@@ -174,7 +185,166 @@ function TabToday({items,checks,selDate,setSelDate,toggleCheck,saveChecks}){
       <button onClick={()=>{var n=new Date(selDate);n.setDate(n.getDate()+1);setSelDate(n)}} style={{background:"none",border:"none",cursor:"pointer",padding:4}}><Ic n="chevR" s={16} c={T.muted}/></button>
     </div>
     <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:6,padding:"4px 18px 12px"}}>{[{l:"Att göra",v:tot-done,c:T.warning},{l:"Klart",v:done,c:T.success},{l:"Dagar",v:stackD>=0?stackD+"d":"—",c:T.accent}].map((s,i)=><div key={i} style={{background:T.card,border:"1px solid "+T.border,borderRadius:8,padding:"8px 10px",textAlign:"center"}}><div style={{fontSize:8,color:T.muted,marginBottom:2}}>{s.l}</div><div style={{fontSize:18,fontWeight:800,color:s.c,fontFamily:"'JetBrains Mono',monospace",lineHeight:1}}>{s.v}</div></div>)}</div>
-    <div style={{padding:"0 18px 100px"}}>{SO.map(slot=>{var si=grouped[slot];if(!si||!si.length)return null;var sc=si.filter(i=>dayC[i.id]).length,allD=sc===si.length;return(<div key={slot} style={{marginBottom:16}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}><div style={{fontSize:11,fontWeight:700,color:allD?T.success:T.accent}}>{SL[slot]}</div><div style={{display:"flex",alignItems:"center",gap:8}}><div style={{fontSize:9,color:T.subtle,fontFamily:"'JetBrains Mono',monospace"}}>{sc}/{si.length}</div>{!allD&&<button onClick={()=>{var nc={...checks},d=dk(selDate);if(!nc[d])nc[d]={};si.forEach(i=>{nc[d][i.id]=true});saveChecks(nc)}} style={{padding:"3px 8px",borderRadius:5,border:"1px solid "+T.accent+"44",background:T.accent+"10",color:T.accent,fontSize:9,fontWeight:700,cursor:"pointer"}}>Alla ✓</button>}</div></div>{si.map(item=><ItemRow key={item.id} item={item} checked={!!dayC[item.id]} onToggle={()=>toggleCheck(item.id)}/>)}</div>)})}</div>
+    {/* Recovery Index Widget */}
+    {(function(){
+      var rs=ouraReady&&ouraReady.score?ouraReady.score:0;
+      var ss=ouraSleep&&ouraSleep.score?ouraSleep.score:0;
+      var hrv=ouraReady&&ouraReady.contributors&&ouraReady.contributors.hrv_balance!=null?ouraReady.contributors.hrv_balance:0;
+      if(!rs&&!ss)return null;
+      var kmScore=Math.round((rs*0.4+ss*0.35+hrv*0.25));
+      var label=kmScore>=80?"Optimal":kmScore>=60?"Bra":kmScore>=40?"Okej":"Låg";
+      var color=kmScore>=80?T.success:kmScore>=60?T.accent2:kmScore>=40?T.warning:T.danger;
+      var ringSize=56,ringR=(ringSize-6)/2,ringC=2*Math.PI*ringR,ringOff=ringC-ringC*kmScore/100;
+      return <div style={{padding:"0 18px 10px"}}>
+        <div style={{display:"flex",alignItems:"center",gap:12,background:"linear-gradient(135deg,"+color+"12,"+color+"06)",border:"1px solid "+color+"28",borderRadius:12,padding:"10px 14px"}}>
+          <div style={{position:"relative",width:ringSize,height:ringSize,flexShrink:0}}>
+            <svg width={ringSize} height={ringSize}><circle cx={ringSize/2} cy={ringSize/2} r={ringR} fill="none" stroke={T.surface} strokeWidth="4"/><circle cx={ringSize/2} cy={ringSize/2} r={ringR} fill="none" stroke={color} strokeWidth="4" strokeDasharray={ringC} strokeDashoffset={ringOff} strokeLinecap="round" transform={"rotate(-90 "+ringSize/2+" "+ringSize/2+")"} style={{transition:"stroke-dashoffset .6s"}}/></svg>
+            <div style={{position:"absolute",inset:0,display:"flex",alignItems:"center",justifyContent:"center",flexDirection:"column"}}><div style={{fontSize:18,fontWeight:900,color:color,fontFamily:"'JetBrains Mono'",lineHeight:1}}>{kmScore}</div></div>
+          </div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:12,fontWeight:800,color:T.text}}>Recovery</div>
+            <div style={{fontSize:10,fontWeight:700,color:color,marginBottom:3}}>{label}</div>
+            <div style={{display:"flex",gap:8}}>
+              {rs>0&&<div style={{fontSize:9,color:T.muted}}><span style={{fontWeight:700,color:T.accent,fontFamily:"'JetBrains Mono'"}}>{rs}</span> ready</div>}
+              {ss>0&&<div style={{fontSize:9,color:T.muted}}><span style={{fontWeight:700,color:T.accent2,fontFamily:"'JetBrains Mono'"}}>{ss}</span> sömn</div>}
+              {hrv>0&&<div style={{fontSize:9,color:T.muted}}><span style={{fontWeight:700,color:"#a29bfe",fontFamily:"'JetBrains Mono'"}}>{hrv}</span> hrv</div>}
+            </div>
+          </div>
+        </div>
+      </div>
+    })()}
+    <div style={{padding:"0 18px 100px"}}>{SO.map(slot=>{var si=grouped[slot];if(!si||!si.length)return null;var sc=si.filter(i=>dayC[i.id]).length,allD=sc===si.length;var ids=si.map(function(i){return i.id});return(<div key={slot} style={{marginBottom:16}}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}><div style={{fontSize:11,fontWeight:700,color:allD?T.success:T.accent}}>{SL[slot]}</div><div style={{display:"flex",alignItems:"center",gap:6}}><button onClick={function(){toggleAllSlot(ids,!allD)}} style={{padding:"2px 8px",borderRadius:4,border:"1px solid "+(allD?T.success+"44":T.border),background:allD?T.success+"12":"transparent",color:allD?T.success:T.muted,fontSize:8,fontWeight:700,cursor:"pointer"}}>{allD?"✓ Alla":"Bocka alla"}</button><div style={{fontSize:9,color:T.subtle,fontFamily:"'JetBrains Mono',monospace"}}>{sc}/{si.length}</div></div></div>{si.map(item=><ItemRow key={item.id} item={item} checked={!!dayC[item.id]} onToggle={()=>toggleCheck(item.id)}/>)}</div>)})}
+    {/* Summera dagen */}
+    <button onClick={function(){setShowSummary(!showSummary)}} style={{width:"100%",padding:14,borderRadius:12,border:"none",background:showSummary?"linear-gradient(135deg,"+T.accent+","+T.accent2+")":"linear-gradient(135deg,"+T.accent+"22,"+T.accent2+"22)",color:showSummary?"#fff":T.accent,fontSize:13,fontWeight:800,cursor:"pointer",marginTop:8,marginBottom:showSummary?10:0}}>{showSummary?"Dölj summering":"Summera dagen"}</button>
+    {showSummary&&<div style={{animation:"fi .15s ease-out"}}>
+      {/* Stack-status */}
+      <div style={{background:T.card,border:"1px solid "+T.border,borderRadius:10,padding:12,marginBottom:8}}>
+        <div style={{fontSize:11,fontWeight:700,marginBottom:8}}>Stack avklarat</div>
+        {(function(){var cats=[{k:"peptide",l:"Peptider",c:CC.peptide},{k:"supplement",l:"Kosttillskott",c:CC.supplement},{k:"skincare",l:"Hudvård",c:CC.skincare},{k:"training",l:"Träning",c:CC.training}];
+          return cats.map(function(cat){
+            var catItems=today.filter(function(i){return i.category===cat.k});
+            if(!catItems.length)return null;
+            var catDone=catItems.filter(function(i){return dayC[i.id]}).length;
+            var catPct=Math.round(catDone/catItems.length*100);
+            return <div key={cat.k} style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
+              <div style={{width:4,height:20,borderRadius:2,background:cat.c}}/>
+              <div style={{flex:1}}>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:2}}>
+                  <span style={{fontWeight:600}}>{cat.l}</span>
+                  <span style={{fontWeight:700,fontFamily:"'JetBrains Mono'",color:catPct===100?T.success:cat.c}}>{catDone}/{catItems.length}</span>
+                </div>
+                <div style={{height:4,background:T.surface,borderRadius:2,overflow:"hidden"}}>
+                  <div style={{height:"100%",width:catPct+"%",background:catPct===100?T.success:cat.c,borderRadius:2}}/>
+                </div>
+              </div>
+            </div>
+          })
+        })()}
+        <div style={{display:"flex",justifyContent:"space-between",borderTop:"1px solid "+T.border,paddingTop:6,marginTop:4,fontSize:11,fontWeight:800}}>
+          <span>Totalt</span>
+          <span style={{fontFamily:"'JetBrains Mono'",color:pct===100?T.success:T.accent}}>{done}/{tot} ({pct}%)</span>
+        </div>
+      </div>
+
+      {/* Oura-data */}
+      {(ouraReady||ouraSleep||ouraActivity)&&<div style={{background:T.card,border:"1px solid "+T.border,borderRadius:10,padding:12,marginBottom:8}}>
+        <div style={{fontSize:11,fontWeight:700,marginBottom:8}}>Oura Ring</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
+          {ouraReady&&ouraReady.score&&<div style={{textAlign:"center"}}>
+            <div style={{fontSize:8,color:T.muted}}>Readiness</div>
+            <div style={{fontSize:18,fontWeight:800,fontFamily:"'JetBrains Mono'",color:T.accent}}>{ouraReady.score}</div>
+          </div>}
+          {ouraSleep&&ouraSleep.score&&<div style={{textAlign:"center"}}>
+            <div style={{fontSize:8,color:T.muted}}>Sömn</div>
+            <div style={{fontSize:18,fontWeight:800,fontFamily:"'JetBrains Mono'",color:T.accent2}}>{ouraSleep.score}</div>
+          </div>}
+          {ouraActivity&&ouraActivity.score&&<div style={{textAlign:"center"}}>
+            <div style={{fontSize:8,color:T.muted}}>Aktivitet</div>
+            <div style={{fontSize:18,fontWeight:800,fontFamily:"'JetBrains Mono'",color:T.success}}>{ouraActivity.score}</div>
+          </div>}
+        </div>
+        {ouraActivity&&<div style={{display:"flex",gap:6,marginTop:8}}>
+          {ouraActivity.steps&&<div style={{flex:1,textAlign:"center",background:T.surface,borderRadius:6,padding:"4px"}}>
+            <div style={{fontSize:7,color:T.muted}}>Steg</div>
+            <div style={{fontSize:11,fontWeight:700,fontFamily:"'JetBrains Mono'",color:T.success}}>{ouraActivity.steps.toLocaleString("sv")}</div>
+          </div>}
+          {ouraActivity.active_calories&&<div style={{flex:1,textAlign:"center",background:T.surface,borderRadius:6,padding:"4px"}}>
+            <div style={{fontSize:7,color:T.muted}}>Kalorier</div>
+            <div style={{fontSize:11,fontWeight:700,fontFamily:"'JetBrains Mono'",color:T.warning}}>{ouraActivity.active_calories}</div>
+          </div>}
+          {ouraActivity.total_calories&&<div style={{flex:1,textAlign:"center",background:T.surface,borderRadius:6,padding:"4px"}}>
+            <div style={{fontSize:7,color:T.muted}}>Totalt kcal</div>
+            <div style={{fontSize:11,fontWeight:700,fontFamily:"'JetBrains Mono'",color:T.danger}}>{ouraActivity.total_calories}</div>
+          </div>}
+        </div>}
+      </div>}
+
+      {/* Kost placeholder */}
+      <div style={{background:T.card,border:"1px solid "+T.border,borderRadius:10,padding:12,marginBottom:8}}>
+        <div style={{fontSize:11,fontWeight:700,marginBottom:4}}>Kost</div>
+        <div style={{display:"flex",gap:6}}>
+          {[{l:"Protein",v:"~68g",c:T.accent},{l:"Kcal",v:"~610",c:T.warning}].map(function(k,i){
+            return <div key={i} style={{flex:1,textAlign:"center",background:T.surface,borderRadius:6,padding:"6px"}}>
+              <div style={{fontSize:7,color:T.muted}}>{k.l}</div>
+              <div style={{fontSize:13,fontWeight:800,fontFamily:"'JetBrains Mono'",color:k.c}}>{k.v}</div>
+            </div>
+          })}
+        </div>
+        <div style={{fontSize:8,color:T.subtle,marginTop:4}}>Fruktfrukost 370kcal + Shake 240kcal · Fullständig kost-tracker i V10</div>
+      </div>
+    </div>}
+    </div>
+  </div>);
+}
+
+function TabRoutines({items,saveItems,setModal}){
+  var cats=["peptide","supplement","skincare","custom"];
+  return(<div style={{animation:"fi .2s ease-out"}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}><div style={{fontSize:20,fontWeight:800}}>Rutiner</div><button onClick={()=>setModal("add")} style={{display:"flex",alignItems:"center",gap:4,padding:"6px 12px",borderRadius:7,border:"1px dashed "+T.border,background:"transparent",color:T.muted,fontSize:11,fontWeight:600,cursor:"pointer"}}><Ic n="plus" s={12} c={T.muted}/>Ny</button></div>
+    {cats.map(cat=>{var ci=items.filter(i=>i.category===cat);if(!ci.length)return null;return(<div key={cat} style={{marginBottom:20}}>
+      <div style={{fontSize:12,fontWeight:700,color:CC[cat],marginBottom:8,display:"flex",alignItems:"center",gap:6}}><div style={{width:8,height:8,borderRadius:"50%",background:CC[cat]}}/>{CL[cat]} ({ci.length})</div>
+      {ci.map(item=><div key={item.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:8,background:T.card,border:"1px solid "+T.border,marginBottom:4,opacity:item.active!==false?1:0.4}}>
+        <button onClick={()=>{saveItems(items.map(i=>i.id===item.id?{...i,active:i.active===false?true:false}:i))}} style={{width:40,height:24,borderRadius:12,background:item.active!==false?T.success:"#333",border:"none",cursor:"pointer",position:"relative",transition:"background .2s"}}><div style={{width:18,height:18,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:item.active!==false?19:3,transition:"left .2s"}}/></button>
+        <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:600}}>{item.name}</div><div style={{fontSize:10,color:T.subtle}}>{(item.schedule&&item.schedule.type)==="specific-days"?(item.schedule.days||[]).map(function(d){return DAYS_SV[d]}).join(", "):(item.schedule&&item.schedule.type)==="alternating"?"Varannan dag":"Varje dag"} · {((SL[item.timeSlot]||"").split("—")[0]||"").trim()||item.timeSlot}</div></div>
+        <button onClick={()=>setModal({type:"edit",item})} style={{background:"none",border:"none",cursor:"pointer",padding:4}}><Ic n="edit" s={14} c={T.muted}/></button>
+      </div>)}
+    </div>)})}
+  </div>);
+}
+
+function TabPlan(){
+  var months=[];for(var m=2;m<12;m++)months.push({m,label:MONTHS[m]});
+  return(<div style={{animation:"fi .2s ease-out"}}>
+    <div style={{fontSize:20,fontWeight:800,marginBottom:4}}>Tidslinje 2026</div>
+    <div style={{fontSize:11,color:T.muted,marginBottom:16}}>Peptidcykler, pauser och planerade starter</div>
+    <div style={{overflowX:"auto",paddingBottom:10}}>
+      <div style={{minWidth:600}}>
+        <div style={{display:"flex",borderBottom:"1px solid "+T.border,paddingBottom:6,marginBottom:8}}>
+          <div style={{width:110,flexShrink:0}}/>
+          {months.map(mo=><div key={mo.m} style={{flex:1,fontSize:10,fontWeight:600,color:T.muted,textAlign:"center"}}>{mo.label}</div>)}
+        </div>
+        {PLAN_DATA.map(item=>{
+          var startM=item.start?new Date(item.start).getMonth():null;
+          var endM=item.end?new Date(item.end).getMonth():11;
+          return(<div key={item.id} style={{display:"flex",alignItems:"center",marginBottom:6}}>
+            <div style={{width:110,flexShrink:0,fontSize:11,fontWeight:600,color:item.color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.name}</div>
+            <div style={{flex:1,display:"flex",position:"relative",height:20}}>
+              {months.map((mo,mi)=>{
+                var isActive=startM!==null&&mo.m>=startM&&mo.m<=endM;
+                var isPause=(item.pauses||[]).some(p=>{var pf=new Date(p.from).getMonth();var pt=new Date(p.to).getMonth();return mo.m>=pf&&mo.m<=pt});
+                var bg=isActive?(isPause?"rgba(136,136,160,0.2)":item.color+"33"):"transparent";
+                var border=isActive?"none":"none";
+                return <div key={mi} style={{flex:1,height:20,background:bg,borderRadius:mi===0?4:mi===months.length-1?4:0,display:"flex",alignItems:"center",justifyContent:"center"}}>{isPause&&<div style={{fontSize:7,color:T.subtle,fontWeight:700}}>PAUS</div>}</div>;
+              })}
+            </div>
+          </div>);
+        })}
+      </div>
+    </div>
+    <div style={{marginTop:16}}>
+      <div style={{fontSize:13,fontWeight:700,marginBottom:8}}>Pausprotokoll</div>
+      {PLAN_DATA.filter(p=>p.note).map(p=><div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:8,background:T.card,border:"1px solid "+T.border,marginBottom:4}}><div style={{width:4,height:28,borderRadius:2,background:p.color,flexShrink:0}}/><div><div style={{fontSize:12,fontWeight:600,color:p.color}}>{p.name}</div><div style={{fontSize:10,color:T.subtle}}>{p.note}</div></div></div>)}
+    </div>
   </div>);
 }
 
@@ -182,8 +352,6 @@ function TabInfo({items,saveItems,setModal}){
   const[sub,setSub]=useState("info");
   const[sel,setSel]=useState(null);
   var cats=[{k:"Peptider",items:Object.entries(INFO_DATA).filter(([,v])=>v.cat==="Peptider")},{k:"Kosttillskott",items:Object.entries(INFO_DATA).filter(([,v])=>v.cat==="Kosttillskott")},{k:"Hudvård",items:Object.entries(INFO_DATA).filter(([,v])=>v.cat==="Hudvård")}];
-
-  // Info detail view
   if(sel){var info=INFO_DATA[sel];if(!info)return null;return(<div style={{padding:"14px 18px 100px",animation:"fi .15s ease-out"}}>
     <button onClick={()=>setSel(null)} style={{display:"flex",alignItems:"center",gap:4,background:"none",border:"none",color:T.accent,fontSize:11,fontWeight:600,cursor:"pointer",marginBottom:12}}><Ic n="back" s={14} c={T.accent}/>Tillbaka</button>
     <div style={{fontSize:20,fontWeight:800,marginBottom:4}}>{info.title}</div>
@@ -194,14 +362,11 @@ function TabInfo({items,saveItems,setModal}){
     {info.sideEffects&&<div style={{background:T.card,border:"1px solid "+T.border,borderRadius:10,padding:14,marginBottom:10}}><div style={{fontSize:10,color:T.danger,marginBottom:6}}>Biverkningar att bevaka</div>{info.sideEffects.map((b,i)=><div key={i} style={{fontSize:12,color:T.text,padding:"3px 0",paddingLeft:12,borderLeft:"2px solid "+T.danger,marginBottom:4}}>{b}</div>)}</div>}
     {info.timeline&&<div style={{background:T.card,border:"1px solid "+T.border,borderRadius:10,padding:14,marginBottom:10}}><div style={{fontSize:10,color:T.accent,marginBottom:6}}>När ser du resultat?</div><div style={{fontSize:12,color:T.text,lineHeight:1.7}}>{info.timeline}</div></div>}
   </div>);}
-
   return(<div style={{padding:"14px 18px 100px",animation:"fi .2s ease-out"}}>
     <div style={{fontSize:20,fontWeight:800,marginBottom:14}}>Info</div>
     <div style={{display:"flex",gap:3,marginBottom:14}}>
-      {[{k:"info",l:"Substanser"},{k:"timeline",l:"Tidslinje"},{k:"routines",l:"Rutiner"}].map(function(s){return <button key={s.k} onClick={function(){setSub(s.k)}} style={{flex:1,padding:"7px 0",borderRadius:8,border:sub===s.k?"1px solid "+T.accent:"1px solid "+T.border,background:sub===s.k?"rgba(108,92,231,0.1)":T.card,color:sub===s.k?T.accent:T.muted,fontSize:11,fontWeight:600,cursor:"pointer"}}>{s.l}</button>})}
+      {[{k:"info",l:"Substanser"},{k:"timeline",l:"Tidslinje"},{k:"routines",l:"Rutiner"},{k:"oura",l:"Oura"}].map(function(s){return <button key={s.k} onClick={function(){setSub(s.k)}} style={{flex:1,padding:"7px 0",borderRadius:8,border:sub===s.k?"1px solid "+T.accent:"1px solid "+T.border,background:sub===s.k?"rgba(108,92,231,0.1)":T.card,color:sub===s.k?T.accent:T.muted,fontSize:10,fontWeight:600,cursor:"pointer"}}>{s.l}</button>})}
     </div>
-
-    {/* SUBSTANSER */}
     {sub==="info"&&<div>
       {cats.map(cat=><div key={cat.k} style={{marginBottom:20}}>
         <div style={{fontSize:12,fontWeight:700,color:T.muted,marginBottom:8}}>{cat.k}</div>
@@ -212,851 +377,1055 @@ function TabInfo({items,saveItems,setModal}){
         </div>)}
       </div>)}
     </div>}
+    {sub==="timeline"&&<TabPlan/>}
+    {sub==="routines"&&<TabRoutines items={items} saveItems={saveItems} setModal={setModal}/>}
+    {sub==="oura"&&<OuraPanel/>}
+  </div>);
+}
 
-    {/* TIDSLINJE */}
-    {sub==="timeline"&&<div>
-      {(function(){var months=[];for(var m=2;m<12;m++)months.push({m:m,label:MONTHS[m]});
-        return <div>
-          <div style={{overflowX:"auto",paddingBottom:10}}>
-            <div style={{minWidth:600}}>
-              <div style={{display:"flex",borderBottom:"1px solid "+T.border,paddingBottom:6,marginBottom:8}}>
-                <div style={{width:110,flexShrink:0}}/>
-                {months.map(function(mo){return <div key={mo.m} style={{flex:1,fontSize:10,fontWeight:600,color:T.muted,textAlign:"center"}}>{mo.label}</div>})}
+var PEPTIDE_MARKERS=[
+  {date:"03-28",name:"Stack start",color:"#6c5ce7"},
+  {date:"04-15",name:"Epitalon",color:"#e84393"},
+  {date:"05-01",name:"CJC+Ipa",color:"#0984e3"},
+  {date:"05-09",name:"Semax paus",color:"#00cec9"},
+  {date:"05-23",name:"BPC+TB paus",color:"#00b894"}
+];
+
+function MiniGraph({data,color,h,label,markers}){
+  if(!data||!data.length)return null;
+  var vals=data.map(function(d){return d.v});
+  var mn=Math.min.apply(null,vals),mx=Math.max.apply(null,vals);
+  if(mx===mn)mx=mn+1;
+  var w=280,ht=h||60,pad=2;
+  var pts=data.map(function(d,i){
+    var x=pad+i/(data.length-1||1)*(w-pad*2);
+    var y=ht-pad-(d.v-mn)/(mx-mn)*(ht-pad*2);
+    return{x:x,y:y,v:d.v,l:d.l}
+  });
+  var path="M"+pts.map(function(p){return p.x+","+p.y}).join("L");
+  var avg=Math.round(vals.reduce(function(s,v){return s+v},0)/vals.length);
+  // Find marker positions
+  var mks=[];
+  if(markers&&data.length>1){
+    markers.forEach(function(m){
+      for(var i=0;i<data.length;i++){
+        if(data[i].l===m.date){
+          var x=pad+i/(data.length-1||1)*(w-pad*2);
+          mks.push({x:x,name:m.name,color:m.color});
+          break;
+        }
+      }
+    });
+  }
+  return <div style={{marginBottom:12}}>
+    {label&&<div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+      <span style={{fontSize:10,fontWeight:700,color:color||T.accent}}>{label}</span>
+      <span style={{fontSize:9,color:T.subtle,fontFamily:"'JetBrains Mono'"}}>snitt {avg}</span>
+    </div>}
+    <svg width="100%" viewBox={"0 0 "+w+" "+ht} style={{borderRadius:6,background:T.card,border:"1px solid "+T.border}}>
+      {mks.map(function(mk,i){return <g key={"m"+i}><line x1={mk.x} y1={2} x2={mk.x} y2={ht-2} stroke={mk.color} strokeWidth="1" strokeDasharray="3,2" opacity="0.6"/><circle cx={mk.x} cy={4} r={3} fill={mk.color} opacity="0.8"/><text x={mk.x+4} y={10} fill={mk.color} fontSize="5" fontWeight="700" opacity="0.7">{mk.name}</text></g>})}
+      <path d={path} fill="none" stroke={color||T.accent} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+      {pts.map(function(p,i){return <circle key={i} cx={p.x} cy={p.y} r={2.5} fill={color||T.accent}/>})}
+    </svg>
+    <div style={{display:"flex",justifyContent:"space-between",fontSize:8,color:T.subtle,marginTop:2}}>
+      {data.length>0&&<span>{data[0].l}</span>}
+      {data.length>1&&<span>{data[data.length-1].l}</span>}
+    </div>
+  </div>;
+}
+
+function OuraPanel(){
+  const[token,setToken]=useState("");
+  const[oura,setOura]=useState(null);
+  const[loading,setLoading]=useState(false);
+  const[lastSync,setLastSync]=useState(null);
+  const[err,setErr]=useState(null);
+  const[range,setRange]=useState(7);
+
+  // Load token + cached data from Supabase
+  useEffect(function(){(async function(){
+    try{
+      var r=await sb.from('health_data').select('data').eq('id','oura').single();
+      if(r.data&&r.data.data){
+        if(r.data.data.token)setToken(r.data.data.token);
+        if(r.data.data.cached)setOura(r.data.data.cached);
+        if(r.data.data.lastSync)setLastSync(r.data.data.lastSync);
+      }
+    }catch(e){}
+  })()},[]);
+
+  // Auto-sync: on load if token exists + >1h since last sync
+  useEffect(function(){
+    if(!token)return;
+    if(!oura){doSync();return}
+    if(lastSync){var diff=Date.now()-new Date(lastSync).getTime();if(diff>3600000)doSync()}
+  },[token]);
+
+  async function saveOura(data,syncTime){
+    var payload={token:token,cached:data,lastSync:syncTime};
+    setOura(data);setLastSync(syncTime);
+    await sb.from('health_data').upsert({id:'oura',data:payload,updated_at:new Date().toISOString()});
+  }
+
+  async function saveToken(t){
+    setToken(t);
+    await sb.from('health_data').upsert({id:'oura',data:{token:t,cached:oura,lastSync:lastSync},updated_at:new Date().toISOString()});
+  }
+
+  async function doSync(){
+    if(!token){setErr("Ingen token");return}
+    setLoading(true);setErr(null);
+    try{
+      var end=new Date();
+      var start=new Date();start.setDate(start.getDate()-range);
+      var sd=dk(start),ed=dk(end);
+      var base="https://api.ouraring.com/v2/usercollection/";
+      var headers={"Authorization":"Bearer "+token};
+
+      var results=await Promise.all([
+        fetch(base+"daily_readiness?start_date="+sd+"&end_date="+ed,{headers:headers}).then(function(r){return r.json()}),
+        fetch(base+"daily_sleep?start_date="+sd+"&end_date="+ed,{headers:headers}).then(function(r){return r.json()}),
+        fetch(base+"daily_activity?start_date="+sd+"&end_date="+ed,{headers:headers}).then(function(r){return r.json()}),
+        fetch(base+"heart_rate?start_date="+sd+"T00:00:00&end_date="+ed+"T23:59:59",{headers:headers}).then(function(r){return r.json()}),
+        fetch(base+"workout?start_date="+sd+"&end_date="+ed,{headers:headers}).then(function(r){return r.json()}),
+        fetch(base+"sleep?start_date="+sd+"&end_date="+ed,{headers:headers}).then(function(r){return r.json()})
+      ]);
+
+      var readiness=results[0].data||[];
+      var sleep=results[1].data||[];
+      var activity=results[2].data||[];
+      var heartrate=results[3].data||[];
+      var workouts=results[4].data||[];
+      var sleepDetail=results[5].data||[];
+
+      var data={readiness:readiness,sleep:sleep,activity:activity,heartrate:heartrate,workouts:workouts,sleepDetail:sleepDetail};
+      var syncTime=new Date().toISOString();
+      await saveOura(data,syncTime);
+    }catch(e){setErr("Sync misslyckades: "+e.message)}
+    setLoading(false);
+  }
+
+  // Extract today's data
+  var todayStr=dk(new Date());
+  var todayReady=(oura&&oura.readiness||[]).find(function(r){return r.day===todayStr});
+  var todaySleep=(oura&&oura.sleep||[]).find(function(s){return s.day===todayStr});
+  var todayActivity=(oura&&oura.activity||[]).find(function(a){return a.day===todayStr});
+
+  // Yesterdays for comparison
+  var yest=new Date();yest.setDate(yest.getDate()-1);var yestStr=dk(yest);
+  var yestReady=(oura&&oura.readiness||[]).find(function(r){return r.day===yestStr});
+  var yestSleep=(oura&&oura.sleep||[]).find(function(s){return s.day===yestStr});
+
+  // Extract HRV from sleep contributors
+  function getHRV(sleepItem){
+    if(!sleepItem)return null;
+    if(sleepItem.contributors&&sleepItem.contributors.deep_sleep!=null){}
+    // Oura v2: hrv is in sleep.data items under "average_hrv" or we get from heart_rate
+    return sleepItem.contributors&&sleepItem.contributors.hrv_balance!=null?sleepItem.contributors.hrv_balance:null;
+  }
+
+  // Build trend data
+  function buildTrend(items,key,labelKey){
+    if(!items)return[];
+    return items.map(function(d){
+      var val=0;
+      if(key==="score")val=d.score||0;
+      else if(key==="total_sleep")val=d.contributors&&d.contributors.total_sleep?d.contributors.total_sleep:0;
+      else if(key==="steps")val=d.steps||0;
+      else if(key==="active_calories")val=d.active_calories||0;
+      else val=d[key]||0;
+      return{v:val,l:(d.day||"").slice(5)}
+    }).filter(function(d){return d.v>0});
+  }
+
+  var readinessTrend=buildTrend(oura&&oura.readiness,"score");
+  var sleepTrend=buildTrend(oura&&oura.sleep,"score");
+  var stepsTrend=buildTrend(oura&&oura.activity,"steps");
+
+  // RHR trend from readiness contributors
+  var rhrTrend=(oura&&oura.readiness||[]).map(function(r){
+    var rhr=r.contributors&&r.contributors.resting_heart_rate?r.contributors.resting_heart_rate:0;
+    return{v:rhr,l:(r.day||"").slice(5)}
+  }).filter(function(d){return d.v>0});
+
+  // No token yet
+  if(!token){
+    return <div>
+      <div style={{textAlign:"center",padding:"30px 10px"}}>
+        <div style={{fontSize:36,marginBottom:10}}>💍</div>
+        <div style={{fontSize:14,fontWeight:700,marginBottom:4}}>Anslut Oura Ring</div>
+        <div style={{fontSize:11,color:T.muted,marginBottom:16}}>Klistra in din Personal Access Token</div>
+        <input id="oura-token" placeholder="Klistra in token..." style={{width:"100%",padding:"10px 12px",borderRadius:8,border:"1px solid "+T.border,background:T.surface,color:T.text,fontSize:12,fontFamily:"'JetBrains Mono'",outline:"none",marginBottom:8}}/>
+        <button onClick={function(){var v=document.getElementById("oura-token").value.trim();if(v)saveToken(v)}} style={{width:"100%",padding:12,borderRadius:10,border:"none",background:T.accent,color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Anslut</button>
+        <div style={{fontSize:9,color:T.subtle,marginTop:10}}>Hämta token: cloud.ouraring.com → Personal Access Tokens</div>
+      </div>
+    </div>;
+  }
+
+  return <div>
+    {/* Sync bar */}
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+      <div>
+        <div style={{fontSize:9,color:T.subtle}}>Senast synkad</div>
+        <div style={{fontSize:10,fontWeight:600,color:T.muted}}>{lastSync?new Date(lastSync).toLocaleString("sv",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"Aldrig"}</div>
+      </div>
+      <div style={{display:"flex",gap:4}}>
+        <button onClick={function(){saveToken("")}} style={{padding:"6px 10px",borderRadius:6,border:"1px solid "+T.border,background:"transparent",color:T.subtle,fontSize:9,fontWeight:600,cursor:"pointer"}}>Byt token</button>
+        <button onClick={doSync} disabled={loading} style={{padding:"6px 14px",borderRadius:6,border:"none",background:loading?T.surface:T.accent,color:loading?T.muted:"#fff",fontSize:10,fontWeight:700,cursor:loading?"not-allowed":"pointer"}}>{loading?"Synkar...":"Synka nu"}</button>
+      </div>
+    </div>
+    {err&&<div style={{padding:"8px 12px",borderRadius:8,background:T.danger+"15",color:T.danger,fontSize:11,fontWeight:600,marginBottom:10}}>{err}</div>}
+
+    {!oura&&!loading&&<div style={{textAlign:"center",padding:30,color:T.subtle}}>Tryck "Synka nu" för att hämta data</div>}
+
+    {oura&&<div>
+      {/* Dagens kort */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:10}}>
+        {/* HRV */}
+        <div style={{background:T.card,border:"1px solid "+T.border,borderRadius:10,padding:"10px 10px"}}>
+          <div style={{fontSize:8,color:T.muted,marginBottom:2}}>HRV</div>
+          <div style={{fontSize:22,fontWeight:900,color:"#a29bfe",fontFamily:"'JetBrains Mono'",lineHeight:1}}>{todayReady&&todayReady.contributors&&todayReady.contributors.hrv_balance!=null?todayReady.contributors.hrv_balance:"—"}</div>
+          <div style={{fontSize:8,color:T.subtle}}>balans-score</div>
+        </div>
+        {/* Readiness */}
+        <div style={{background:T.card,border:"1px solid "+T.border,borderRadius:10,padding:"10px 10px"}}>
+          <div style={{fontSize:8,color:T.muted,marginBottom:2}}>Readiness</div>
+          <div style={{display:"flex",alignItems:"baseline",gap:4}}>
+            <span style={{fontSize:22,fontWeight:900,color:T.accent,fontFamily:"'JetBrains Mono'",lineHeight:1}}>{todayReady&&todayReady.score?todayReady.score:"—"}</span>
+            {todayReady&&yestReady&&<span style={{fontSize:10,color:todayReady.score>=yestReady.score?T.success:T.danger}}>{todayReady.score>=yestReady.score?"▲":"▼"}{Math.abs(todayReady.score-yestReady.score)}</span>}
+          </div>
+        </div>
+        {/* Sömn */}
+        <div style={{background:T.card,border:"1px solid "+T.border,borderRadius:10,padding:"10px 10px"}}>
+          <div style={{fontSize:8,color:T.muted,marginBottom:2}}>Sömn</div>
+          <div style={{fontSize:22,fontWeight:900,color:T.accent2,fontFamily:"'JetBrains Mono'",lineHeight:1}}>{todaySleep&&todaySleep.score?todaySleep.score:"—"}</div>
+          <div style={{fontSize:8,color:T.subtle}}>score</div>
+        </div>
+        {/* Activity */}
+        <div style={{background:T.card,border:"1px solid "+T.border,borderRadius:10,padding:"10px 10px"}}>
+          <div style={{fontSize:8,color:T.muted,marginBottom:2}}>Aktivitet</div>
+          <div style={{fontSize:22,fontWeight:900,color:T.success,fontFamily:"'JetBrains Mono'",lineHeight:1}}>{todayActivity&&todayActivity.score?todayActivity.score:"—"}</div>
+          <div style={{fontSize:8,color:T.subtle}}>{todayActivity&&todayActivity.steps?todayActivity.steps.toLocaleString("sv")+" steg":"—"}</div>
+        </div>
+      </div>
+
+      {/* Extra stats */}
+      {todayActivity&&<div style={{display:"flex",gap:6,marginBottom:14}}>
+        {[
+          {l:"Steg",v:todayActivity.steps?todayActivity.steps.toLocaleString("sv"):"—",c:T.success},
+          {l:"Kalorier",v:todayActivity.active_calories?todayActivity.active_calories+"":"—",c:T.warning},
+          {l:"Vilopuls",v:todayReady&&todayReady.contributors&&todayReady.contributors.resting_heart_rate?todayReady.contributors.resting_heart_rate:"—",c:T.danger}
+        ].map(function(s,i){return <div key={i} style={{flex:1,background:T.card,border:"1px solid "+T.border,borderRadius:8,padding:"6px",textAlign:"center"}}>
+          <div style={{fontSize:7,color:T.muted}}>{s.l}</div>
+          <div style={{fontSize:13,fontWeight:800,fontFamily:"'JetBrains Mono'",color:s.c}}>{s.v}</div>
+        </div>})}
+      </div>}
+
+      {/* Range toggle */}
+      <div style={{display:"flex",gap:3,marginBottom:10}}>
+        {[{k:7,l:"7d"},{k:14,l:"14d"},{k:30,l:"30d"}].map(function(r){return <button key={r.k} onClick={function(){setRange(r.k)}} style={{padding:"4px 10px",borderRadius:5,border:range===r.k?"1px solid "+T.accent:"1px solid "+T.border,background:range===r.k?T.accent+"15":"transparent",color:range===r.k?T.accent:T.muted,fontSize:9,fontWeight:600,cursor:"pointer"}}>{r.l}</button>})}
+      </div>
+
+      {/* Trendgrafer */}
+      {readinessTrend.length>1&&<MiniGraph data={readinessTrend} color={T.accent} label="Readiness" markers={PEPTIDE_MARKERS}/>}
+      {sleepTrend.length>1&&<MiniGraph data={sleepTrend} color={T.accent2} label="Sömn Score" markers={PEPTIDE_MARKERS}/>}
+      {rhrTrend.length>1&&<MiniGraph data={rhrTrend} color={T.danger} label="Vilopuls (RHR trend)" markers={PEPTIDE_MARKERS}/>}
+      {stepsTrend.length>1&&<MiniGraph data={stepsTrend} color={T.success} label="Steg" markers={PEPTIDE_MARKERS}/>}
+
+      {/* Sömnarkitektur / Hypnogram */}
+      {(function(){
+        var details=oura&&oura.sleepDetail?oura.sleepDetail:[];
+        var todayDetail=details.filter(function(s){return s.day===todayStr&&s.type==="long_sleep"})[0];
+        var yestDetail=details.filter(function(s){return s.day===yestStr&&s.type==="long_sleep"})[0];
+        var showDetail=todayDetail||yestDetail;
+        if(!showDetail)return null;
+        var phases=showDetail.sleep_phase_5_min;
+        var deepS=showDetail.deep_sleep_duration||0;
+        var remS=showDetail.rem_sleep_duration||0;
+        var lightS=showDetail.light_sleep_duration||0;
+        var awakeS=showDetail.awake_time||0;
+        var totalS=showDetail.total_sleep_duration||0;
+        var eff=showDetail.efficiency||0;
+        var phaseColors={"1":"#6c5ce7","2":"#00cec9","3":"#fdcb6e","4":"#ff6b6b"};
+        var phaseNames={"1":"Djup","2":"Lätt","3":"REM","4":"Vaken"};
+        function fmt(sec){var h=Math.floor(sec/3600);var m=Math.round((sec%3600)/60);return h+"h "+m+"m"}
+
+        // Jämförelse
+        var compDetail=todayDetail?yestDetail:null;
+        var compDeep=compDetail?compDetail.deep_sleep_duration||0:0;
+
+        return <div style={{marginBottom:12}}>
+          <div style={{fontSize:10,fontWeight:700,color:"#a29bfe",marginBottom:6}}>Sömnarkitektur {showDetail===yestDetail?"(igår)":"(inatt)"}</div>
+
+          {/* Hypnogram bar */}
+          {phases&&<div style={{display:"flex",height:28,borderRadius:6,overflow:"hidden",marginBottom:8,border:"1px solid "+T.border}}>
+            {phases.split("").map(function(p,i){return <div key={i} style={{flex:1,background:phaseColors[p]||(p==="N"?T.surface:T.surface),minWidth:1,opacity:0.85}}/>})}
+          </div>}
+
+          {/* Fas-breakdown */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:4,marginBottom:6}}>
+            {[{l:"Djup",v:deepS,c:"#6c5ce7"},{l:"REM",v:remS,c:"#fdcb6e"},{l:"Lätt",v:lightS,c:"#00cec9"},{l:"Vaken",v:awakeS,c:"#ff6b6b"}].map(function(f){
+              var pct=totalS>0?Math.round(f.v/totalS*100):0;
+              return <div key={f.l} style={{textAlign:"center",background:T.card,border:"1px solid "+T.border,borderRadius:6,padding:"4px 2px"}}>
+                <div style={{fontSize:7,color:T.muted}}>{f.l}</div>
+                <div style={{fontSize:12,fontWeight:800,fontFamily:"'JetBrains Mono'",color:f.c}}>{fmt(f.v)}</div>
+                <div style={{fontSize:7,color:T.subtle}}>{pct}%</div>
               </div>
-              {PLAN_DATA.map(function(item){
-                var startM=item.start?new Date(item.start).getMonth():null;
-                var endM=item.end?new Date(item.end).getMonth():11;
-                return <div key={item.id} style={{display:"flex",alignItems:"center",marginBottom:6}}>
-                  <div style={{width:110,flexShrink:0,fontSize:11,fontWeight:600,color:item.color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.name}</div>
-                  <div style={{flex:1,display:"flex",position:"relative",height:20}}>
-                    {months.map(function(mo,mi){
-                      var isActive=startM!==null&&mo.m>=startM&&mo.m<=endM;
-                      var isPause=item.pauses&&item.pauses.some(function(p){var pf=new Date(p.from).getMonth();var pt=new Date(p.to).getMonth();return mo.m>=pf&&mo.m<=pt});
-                      var bg=isActive?(isPause?"rgba(136,136,160,0.2)":item.color+"33"):"transparent";
-                      return <div key={mi} style={{flex:1,height:20,background:bg,borderRadius:mi===0?4:mi===months.length-1?4:0,display:"flex",alignItems:"center",justifyContent:"center"}}>{isPause&&<div style={{fontSize:7,color:T.subtle,fontWeight:700}}>PAUS</div>}</div>;
-                    })}
-                  </div>
+            })}
+          </div>
+
+          {/* Total + effektivitet */}
+          <div style={{display:"flex",gap:6}}>
+            <div style={{flex:1,background:T.surface,borderRadius:6,padding:"4px 8px",textAlign:"center"}}>
+              <div style={{fontSize:7,color:T.muted}}>Totalt</div>
+              <div style={{fontSize:11,fontWeight:800,fontFamily:"'JetBrains Mono'",color:T.text}}>{fmt(totalS)}</div>
+            </div>
+            <div style={{flex:1,background:T.surface,borderRadius:6,padding:"4px 8px",textAlign:"center"}}>
+              <div style={{fontSize:7,color:T.muted}}>Effektivitet</div>
+              <div style={{fontSize:11,fontWeight:800,fontFamily:"'JetBrains Mono'",color:eff>=85?T.success:eff>=70?T.warning:T.danger}}>{eff}%</div>
+            </div>
+            {compDetail&&compDeep>0&&<div style={{flex:1,background:T.surface,borderRadius:6,padding:"4px 8px",textAlign:"center"}}>
+              <div style={{fontSize:7,color:T.muted}}>Djup vs igår</div>
+              <div style={{fontSize:11,fontWeight:800,fontFamily:"'JetBrains Mono'",color:deepS>=compDeep?T.success:T.danger}}>{deepS>=compDeep?"+":"−"}{fmt(Math.abs(deepS-compDeep))}</div>
+            </div>}
+          </div>
+
+          {/* Legend */}
+          <div style={{display:"flex",gap:8,marginTop:6}}>
+            {[{l:"Djup",c:"#6c5ce7"},{l:"Lätt",c:"#00cec9"},{l:"REM",c:"#fdcb6e"},{l:"Vaken",c:"#ff6b6b"}].map(function(f){return <div key={f.l} style={{display:"flex",alignItems:"center",gap:3}}><div style={{width:8,height:4,borderRadius:1,background:f.c}}/><span style={{fontSize:7,color:T.subtle}}>{f.l}</span></div>})}
+          </div>
+        </div>
+      })()}
+
+      {/* Peptid-markörer legend */}
+      <div style={{background:T.card,border:"1px solid "+T.border,borderRadius:8,padding:"8px 10px",marginTop:6}}>
+        <div style={{fontSize:9,fontWeight:700,color:T.muted,marginBottom:4}}>Peptid-markörer på grafer</div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+          {PEPTIDE_MARKERS.map(function(m,i){return <div key={i} style={{display:"flex",alignItems:"center",gap:3}}>
+            <div style={{width:6,height:6,borderRadius:"50%",background:m.color}}/>
+            <span style={{fontSize:8,color:m.color,fontWeight:600}}>{m.name}</span>
+          </div>})}
+        </div>
+      </div>
+    </div>}
+  </div>;
+}
+
+function getRecurringForDate(recurring,dateStr){
+  if(!recurring||!recurring.length)return[];
+  var d=new Date(dateStr+"T12:00"),dow=d.getDay();
+  return recurring.filter(function(r){
+    if(dateStr<r.startDate)return false;
+    if(r.endDate&&dateStr>r.endDate)return false;
+    if(r.repeat==="daily")return true;
+    if(r.repeat==="weekly")return r.days&&r.days.includes(dow);
+    return false;
+  }).map(function(r){return{...r,id:"rec-"+r.id+"-"+dateStr,recurring:true,srcId:r.id}});
+}
+
+function getAutoEvents(dateStr){
+  var d=new Date(dateStr+"T12:00"),dow=d.getDay(),out=[];
+  // Jobb mån-fre
+  if(dow>=1&&dow<=5)out.push({id:"auto-jobb",name:"Jobb",time:"08:00",duration:540,category:"business",auto:true});
+  // Lunch-pass mån-fre
+  if(dow>=1&&dow<=5)out.push({id:"auto-lunch-gym",name:"Lunch: Kardio + Styrka",time:"12:00",duration:30,category:"training",auto:true});
+  // MMA
+  if(dow===1||dow===3||dow===5)out.push({id:"auto-mma",name:"MMA",time:"17:30",duration:60,category:"training",auto:true});
+  if(dow===2||dow===4)out.push({id:"auto-mma",name:"Muay Thai",time:"19:00",duration:90,category:"training",auto:true});
+  if(dow===6)out.push({id:"auto-mma-sat",name:"MMA / Sparring",time:"12:00",duration:60,category:"training",auto:true});
+  // Gym efter MMA
+  var gymByDay={0:{n:"Bröst + Sido-delts",t:"10:00",d:60},1:{n:"Rygg + Biceps (lätt)",t:"18:30",d:30},2:{n:"Ben + Axlar",t:"17:00",d:60},3:{n:"Armar + MMA-core",t:"18:30",d:30},4:{n:"Rygg + Biceps (tungt)",t:"17:00",d:60},5:{n:"Axlar + Triceps",t:"18:30",d:30},6:{n:"Bodybuilding svaga punkter",t:"13:00",d:60}};
+  var g=gymByDay[dow];
+  if(g)out.push({id:"auto-gym-"+dow,name:"Gym: "+g.n,time:g.t,duration:g.d,category:"training",auto:true});
+  // Kardio söndag
+  if(dow===0)out.push({id:"auto-kardio-sun",name:"Kardio 20min trappa",time:"09:00",duration:20,category:"training",auto:true});
+  // Peptider — söndag Retatrutide
+  if(dow===0)out.push({id:"auto-reta",name:"Retatrutide 4mg",time:"07:00",duration:5,category:"peptide",auto:true});
+  return out;
+}
+
+function getOuraWorkouts(ouraCache,dateStr){
+  if(!ouraCache||!ouraCache.workouts)return[];
+  return(ouraCache.workouts||[]).filter(function(w){return w.day===dateStr}).map(function(w,i){
+    var type=w.activity||w.type||"Workout";
+    var dur=w.duration?Math.round(w.duration/60):0;
+    var cal=w.calories||0;
+    var hr=w.average_heart_rate||0;
+    var startTime="";
+    if(w.start_datetime){var st=new Date(w.start_datetime);startTime=String(st.getHours()).padStart(2,"0")+":"+String(st.getMinutes()).padStart(2,"0")}
+    return{id:"oura-w-"+i+"-"+dateStr,name:"💍 "+type,time:startTime,duration:dur,category:"training",auto:true,ouraWorkout:true,detail:cal>0?(cal+" kcal")+(hr>0?" · "+hr+" bpm":""):""}
+  });
+}
+
+function TabCalendar({calData,saveCal,ouraCache}){
+  var cal=calData||{events:[],tasks:[],recurring:[]};
+  var events=cal.events||[],tasks=cal.tasks||[],recurring=cal.recurring||[];
+  const[selDate,setSD]=useState(new Date());
+  const[addMode,setAddMode]=useState(null);
+  const[view,setView]=useState("timeline");
+  const[showAuto,setShowAuto]=useState(true);
+  const[showRecurring,setShowRecurring]=useState(false);
+  const[nowTick,setNowTick]=useState(Date.now());
+  const gridRef=useRef(null);
+  useEffect(function(){var iv=setInterval(function(){setNowTick(Date.now())},60000);return function(){clearInterval(iv)}},[]);
+  useEffect(function(){if(view==="timeline"&&gridRef.current&&sd===dk(new Date())){var now=new Date(),h=now.getHours(),m=now.getMinutes();var startH=8;if(h<startH)h=h+24;var scrollTo=Math.max(0,((h-startH)*60+m-120)/60*52);setTimeout(function(){if(gridRef.current)gridRef.current.scrollTop=scrollTo},100)}},[view,sd,nowTick]);
+  var sd=dk(selDate),dow=selDate.getDay(),isToday=sd===dk(new Date());
+  var autoEvs=showAuto?getAutoEvents(sd):[];
+  var recEvs=getRecurringForDate(recurring,sd);
+  var ouraWk=getOuraWorkouts(ouraCache,sd);
+  var dayEvents=events.filter(function(e){return e.date===sd}).concat(autoEvs).concat(recEvs).concat(ouraWk);
+  var dayTasks=tasks.filter(function(t){return t.date===sd});
+  function addEvent(ev){
+    if(ev.repeat&&ev.repeat!=="none"){
+      var rec={id:uid(),name:ev.name,time:ev.time,duration:ev.duration,category:ev.category,repeat:ev.repeat,days:ev.days||[],startDate:sd,endDate:null};
+      saveCal({...cal,recurring:[...recurring,rec]});
+    }else{
+      saveCal({...cal,events:[...events,{id:uid(),date:sd,...ev}]});
+    }
+    setAddMode(null);
+  }
+  function addTask(name,prio){saveCal({...cal,tasks:[...tasks,{id:uid(),date:sd,name:name,priority:prio,done:false}]});setAddMode(null)}
+  function toggleTask(id){saveCal({...cal,tasks:tasks.map(function(t){return t.id===id?{...t,done:!t.done}:t})})}
+  function rmEvent(id){saveCal({...cal,events:events.filter(function(e){return e.id!==id})})}
+  function rmRecurring(srcId){saveCal({...cal,recurring:recurring.filter(function(r){return r.id!==srcId})})}
+  function rmTask(id){saveCal({...cal,tasks:tasks.filter(function(t){return t.id!==id})})}
+  function eventsOn(d){return events.filter(function(e){return e.date===d}).length+(showAuto?getAutoEvents(d).length:0)+getRecurringForDate(recurring,d).length+getOuraWorkouts(ouraCache,d).length}
+  function tasksOn(d){return tasks.filter(function(t){return t.date===d}).length}
+  return(<div style={{padding:"14px 18px 100px",animation:"fi .2s ease-out"}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+      <div style={{fontSize:20,fontWeight:800}}>Kalender</div>
+      <div style={{display:"flex",gap:3,alignItems:"center"}}>
+        <button onClick={function(){setShowAuto(!showAuto)}} title="Visa/dölj auto-events" style={{padding:"5px 7px",borderRadius:6,border:showAuto?"1px solid "+T.accent2:"1px solid "+T.border,background:showAuto?T.accent2+"15":"transparent",color:showAuto?T.accent2:T.subtle,fontSize:9,fontWeight:600,cursor:"pointer"}}>⚡</button>
+        {[{k:"timeline",l:"Tidslinje"},{k:"day",l:"Dag"},{k:"week",l:"Vecka"},{k:"month",l:"Månad"}].map(function(v){return <button key={v.k} onClick={function(){setView(v.k)}} style={{padding:"5px 8px",borderRadius:6,border:view===v.k?"1px solid "+T.accent:"1px solid "+T.border,background:view===v.k?T.accent+"15":"transparent",color:view===v.k?T.accent:T.muted,fontSize:9,fontWeight:600,cursor:"pointer"}}>{v.l}</button>})}
+      </div>
+    </div>
+    {/* TIDSLINJEVY — timrutnät med events */}
+    {view==="timeline"&&<div>
+    {/* Dag-navigering */}
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+      <button onClick={function(){var n=new Date(selDate);n.setDate(n.getDate()-1);setSD(n)}} style={{background:T.card,border:"1px solid "+T.border,borderRadius:8,padding:"6px 10px",cursor:"pointer"}}><Ic n="chevL" s={16} c={T.text}/></button>
+      <div style={{textAlign:"center"}}>
+        <div style={{fontSize:16,fontWeight:700}}>{DAYS_FULL[dow]}</div>
+        <div style={{fontSize:11,color:T.muted}}>{selDate.getDate()+" "+MONTHS_FULL[selDate.getMonth()]}</div>
+      </div>
+      <button onClick={function(){var n=new Date(selDate);n.setDate(n.getDate()+1);setSD(n)}} style={{background:T.card,border:"1px solid "+T.border,borderRadius:8,padding:"6px 10px",cursor:"pointer"}}><Ic n="chevR" s={16} c={T.text}/></button>
+    </div>
+    <div style={{textAlign:"center",marginBottom:14}}>
+      <button onClick={function(){setSD(new Date())}} style={{padding:"4px 14px",borderRadius:6,border:"1px solid "+(isToday?T.accent:T.border),background:isToday?T.accent+"15":"transparent",color:isToday?T.accent:T.muted,fontSize:10,fontWeight:600,cursor:"pointer"}}>Idag</button>
+    </div>
+    {/* Tasks */}
+    {dayTasks.length>0&&<div style={{marginBottom:12}}>
+      {dayTasks.map(function(t){return <div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:T.card,border:"1px solid "+(t.done?T.success+"22":T.border),borderRadius:8,marginBottom:2,opacity:t.done?0.4:1}}>
+        <button onClick={function(){toggleTask(t.id)}} style={{width:18,height:18,borderRadius:4,border:t.done?"none":"2px solid "+T.border,background:t.done?T.success:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{t.done&&<Ic n="check" s={10} c="#fff"/>}</button>
+        <div style={{flex:1}}><div style={{fontSize:11,fontWeight:600,textDecoration:t.done?"line-through":"none"}}>{t.name}</div></div>
+        <button onClick={function(){rmTask(t.id)}} style={{background:"none",border:"none",cursor:"pointer",padding:2}}><Ic n="trash" s={10} c={T.subtle}/></button>
+      </div>})}
+    </div>}
+    {/* Nästa event */}
+    {isToday&&(function(){
+      var now=new Date(nowTick),nowM=now.getHours()*60+now.getMinutes();
+      var upcoming=dayEvents.filter(function(e){if(!e.time)return false;var p=e.time.split(":").map(Number);return p[0]*60+p[1]>nowM}).sort(function(a,b){var pa=a.time.split(":").map(Number),pb=b.time.split(":").map(Number);return(pa[0]*60+pa[1])-(pb[0]*60+pb[1])});
+      if(!upcoming.length)return null;
+      var next=upcoming[0],colors={training:T.danger,peptide:T.accent,business:T.accent2,private:T.pin,health:T.success},cc=colors[next.category]||T.muted;
+      var np=next.time.split(":").map(Number),minLeft=(np[0]*60+np[1])-nowM;
+      var timeLabel=minLeft<60?minLeft+"min":Math.floor(minLeft/60)+"h "+minLeft%60+"m";
+      return <div style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",background:cc+"10",border:"1px solid "+cc+"22",borderRadius:10,marginBottom:10}}>
+        <div style={{fontSize:9,fontWeight:700,color:cc,textTransform:"uppercase",letterSpacing:1}}>Nästa</div>
+        <div style={{flex:1,fontSize:12,fontWeight:700,color:T.text}}>{next.auto?"⚡ ":next.recurring?"🔁 ":""}{next.name}</div>
+        <div style={{fontSize:11,fontWeight:700,color:cc,fontFamily:"'JetBrains Mono'"}}>{next.time} <span style={{fontSize:9,color:T.subtle}}>({timeLabel})</span></div>
+      </div>
+    })()}
+    {/* Timrutnät */}
+    {(function(){var startH=8,endH=26,now=new Date(nowTick),nowH=now.getHours(),nowMin=now.getMinutes();
+      if(nowH<startH)nowH=nowH+24;
+      var hours=[];for(var h=startH;h<endH;h++)hours.push(h);
+      var tEvents=dayEvents.filter(function(e){return e.time}).map(function(e){
+        var p=e.time.split(":").map(Number);var sm=p[0]*60+p[1];if(p[0]<startH)sm=(p[0]+24)*60+p[1];
+        return{...e,startM:sm,endM:sm+(e.duration||30)}
+      });
+      var HH=52;
+      return <div ref={gridRef} style={{position:"relative",marginBottom:14,maxHeight:420,overflowY:"auto",borderRadius:8}}>
+        {hours.map(function(h){
+          var dh=h%24;
+          var hEvts=tEvents.filter(function(e){return e.startM>=h*60&&e.startM<(h+1)*60});
+          return <div key={h} style={{display:"flex",minHeight:HH,borderBottom:"1px solid "+T.border+"33"}}>
+            <div style={{width:42,flexShrink:0,paddingTop:2,textAlign:"right",paddingRight:8}}>
+              <span style={{fontSize:9,fontWeight:600,fontFamily:"'JetBrains Mono'",color:T.subtle}}>{String(dh).padStart(2,"0")+":00"}</span>
+            </div>
+            <div style={{flex:1,position:"relative",minHeight:HH}}>
+              {hEvts.map(function(ev){
+                var top=((ev.startM-h*60)/60)*HH;
+                var height=Math.max(26,((ev.duration||30)/60)*HH);
+                var colors={training:T.danger,peptide:T.accent,business:T.accent2,private:T.pin,health:T.success};
+                var cc=colors[ev.category]||T.muted;
+                return <div key={ev.id} style={{position:"absolute",top:top,left:2,right:2,height:height,background:cc+"18",border:"1px solid "+cc+"33",borderLeft:"3px solid "+cc,borderRadius:6,padding:"3px 6px",overflow:"hidden",zIndex:ev.auto?1:(ev.recurring?2:3),opacity:ev.auto?(ev.duration>120?0.35:0.7):1}}>
+                  <div style={{fontSize:10,fontWeight:700,color:cc}}>{ev.auto?"⚡ ":ev.recurring?"🔁 ":""}{ev.name}</div>
+                  <div style={{fontSize:8,color:T.subtle}}>{ev.time}{ev.duration&&ev.duration<300?" · "+ev.duration+"m":""}{ev.detail?" · "+ev.detail:""}</div>
                 </div>
               })}
             </div>
           </div>
-          <div style={{marginTop:16}}>
-            <div style={{fontSize:13,fontWeight:700,marginBottom:8}}>Pausprotokoll</div>
-            {PLAN_DATA.filter(function(p){return p.note}).map(function(p){return <div key={p.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 12px",borderRadius:8,background:T.card,border:"1px solid "+T.border,marginBottom:4}}><div style={{width:4,height:28,borderRadius:2,background:p.color,flexShrink:0}}/><div><div style={{fontSize:12,fontWeight:600,color:p.color}}>{p.name}</div><div style={{fontSize:10,color:T.subtle}}>{p.note}</div></div></div>})}
+        })}
+        {/* Nu-linje (live) */}
+        {isToday&&nowH>=startH&&nowH<endH&&<div style={{position:"absolute",left:42,right:0,top:((nowH-startH)*60+nowMin)/60*HH,zIndex:5,pointerEvents:"none",transition:"top 1s linear"}}>
+          <div style={{display:"flex",alignItems:"center"}}>
+            <div style={{width:8,height:8,borderRadius:"50%",background:T.danger,marginLeft:-4,boxShadow:"0 0 6px "+T.danger}}/>
+            <div style={{flex:1,height:2,background:T.danger,boxShadow:"0 0 4px "+T.danger+"66"}}/>
           </div>
-        </div>
-      })()}
-    </div>}
-
-    {/* RUTINER */}
-    {sub==="routines"&&<div>
-      <div style={{display:"flex",justifyContent:"flex-end",marginBottom:12}}><button onClick={function(){setModal("add")}} style={{display:"flex",alignItems:"center",gap:4,padding:"6px 12px",borderRadius:7,border:"1px dashed "+T.border,background:"transparent",color:T.muted,fontSize:11,fontWeight:600,cursor:"pointer"}}><Ic n="plus" s={12} c={T.muted}/>Ny</button></div>
-      {["peptide","supplement","skincare","custom"].map(function(cat){var ci=items.filter(function(i){return i.category===cat});if(!ci.length)return null;return <div key={cat} style={{marginBottom:20}}>
-        <div style={{fontSize:12,fontWeight:700,color:CC[cat],marginBottom:8,display:"flex",alignItems:"center",gap:6}}><div style={{width:8,height:8,borderRadius:"50%",background:CC[cat]}}/>{CL[cat]} ({ci.length})</div>
-        {ci.map(function(item){return <div key={item.id} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 12px",borderRadius:8,background:T.card,border:"1px solid "+T.border,marginBottom:4,opacity:item.active!==false?1:0.4}}>
-          <button onClick={function(){saveItems(items.map(function(i){return i.id===item.id?{...i,active:i.active===false?true:false}:i}))}} style={{width:40,height:24,borderRadius:12,background:item.active!==false?T.success:"#333",border:"none",cursor:"pointer",position:"relative",transition:"background .2s"}}><div style={{width:18,height:18,borderRadius:"50%",background:"#fff",position:"absolute",top:3,left:item.active!==false?19:3,transition:"left .2s"}}/></button>
-          <div style={{flex:1,minWidth:0}}><div style={{fontSize:13,fontWeight:600}}>{item.name}</div><div style={{fontSize:10,color:T.subtle}}>{(item.schedule&&item.schedule.type)==="specific-days"?(item.schedule.days||[]).map(function(d){return DAYS_SV[d]}).join(", "):(item.schedule&&item.schedule.type)==="alternating"?"Varannan dag":"Varje dag"} · {((SL[item.timeSlot]||'').split("—")[0]||'').trim()||item.timeSlot}</div></div>
-          <button onClick={function(){setModal({type:"edit",item:item})}} style={{background:"none",border:"none",cursor:"pointer",padding:4}}><Ic n="edit" s={14} c={T.muted}/></button>
-        </div>})}
-      </div>})}
-    </div>}
-  </div>);
-}
-
-var CAL_CATS={training:{l:"Träning",c:T.danger},peptide:{l:"Peptider",c:T.accent},business:{l:"Företag",c:T.accent2},private:{l:"Privat",c:T.pin},health:{l:"Hälsa",c:T.success}};
-var PRIO_C={"high":"#ff6b6b","medium":"#fdcb6e","low":"#00b894"};
-var PRIO_L={"high":"🔴","medium":"🟡","low":"🟢"};
-
-function TabCalendar({calData,saveCal}){
-  var cal=calData||{events:[],tasks:[]};
-  const[view,setView]=useState("day");
-  const[selDate,setSelDate]=useState(new Date());
-  const[addMode,setAddMode]=useState(null);
-  const[selEvent,setSelEvent]=useState(null);
-
-  var events=cal.events||[],tasks=cal.tasks||[];
-  var sd=dk(selDate),dow=selDate.getDay();
-
-  // Auto-events
-  var autoEvents=[];
-  // MMA
-  if([1,3,5].includes(dow))autoEvents.push({id:"auto-mma",name:"MMA",time:"17:30",duration:60,category:"training",auto:true});
-  if([2,4].includes(dow))autoEvents.push({id:"auto-mma",name:"Muay Thai",time:"19:00",duration:90,category:"training",auto:true});
-  if(dow===6)autoEvents.push({id:"auto-mma",name:"MMA / Sparring",time:"12:00",duration:60,category:"training",auto:true});
-  // Gym
-  var gymNames=["Bröst + sido-delts","Rygg + biceps lätt","Ben + axlar","Armar + MMA-core","Rygg + biceps tungt","Axlar + triceps","BB svaga punkter"];
-  if(dow!==0)autoEvents.push({id:"auto-gym",name:"Gym: "+gymNames[dow],time:dow===0?"10:00":[2,4].includes(dow)?"17:00":"18:30",duration:[1,3,5].includes(dow)?30:60,category:"training",auto:true});
-  // Kreditbetalning
-  if(dow===0)autoEvents.push({id:"auto-credit",name:"Kreditbetalning",time:"12:00",category:"business",auto:true});
-  // Lönedag
-  if(selDate.getDate()===25)autoEvents.push({id:"auto-salary",name:"Lönedag",category:"private",auto:true,allDay:true});
-  // Budget reset
-  if(selDate.getDate()===25)autoEvents.push({id:"auto-budget",name:"Budget-reset (rörlig)",category:"private",auto:true,allDay:true});
-  // Peptid-events från PLAN_DATA
-  PLAN_DATA.forEach(function(p){
-    if(p.start&&dk(selDate)===p.start)autoEvents.push({id:"auto-pep-start-"+p.id,name:p.name+" — START",category:"health",auto:true,allDay:true});
-    if(p.end&&dk(selDate)===p.end)autoEvents.push({id:"auto-pep-end-"+p.id,name:p.name+" — SLUT",category:"health",auto:true,allDay:true});
-    if(p.pauses)p.pauses.forEach(function(pa){
-      if(dk(selDate)===pa.from)autoEvents.push({id:"auto-pep-pause-"+p.id,name:p.name+" — PAUS START",category:"health",auto:true,allDay:true});
-      if(dk(selDate)===pa.to)autoEvents.push({id:"auto-pep-resume-"+p.id,name:p.name+" — RESTART",category:"health",auto:true,allDay:true});
-    });
-  });
-
-  // Recurring events
-  function matchesRecurring(ev,date){
-    if(!ev.recurring&&!ev.specificDays)return false;
-    var start=new Date(ev.date+"T12:00"),d=new Date(date+"T12:00");
-    if(d<start)return false;
-    if(ev.specificDays&&ev.specificDays.length>0)return ev.specificDays.includes(d.getDay());
-    var r=ev.recurring;
-    if(r==="daily")return true;
-    if(r==="weekly"){return d.getDay()===start.getDay()}
-    if(r==="biweekly"){var diff=Math.round((d-start)/86400000);return diff%14===0}
-    if(r==="monthly"){return d.getDate()===start.getDate()}
-    return false;
-  }
-  var recurringEvents=events.filter(function(e){return(e.recurring||e.specificDays)&&e.date!==sd&&matchesRecurring(e,sd)}).map(function(e){return{...e,isRecurring:true}});
-
-  var dayEvents=events.filter(function(e){return e.date===sd}).concat(autoEvents).concat(recurringEvents);
-  var dayTasks=tasks.filter(function(t){return t.date===sd});
-
-  const[conflict,setConflict]=useState(null);
-
-  function checkConflict(ev){
-    if(!ev.time)return null;
-    var p=ev.time.split(':').map(Number),eStart=p[0]*60+p[1],eEnd=eStart+(ev.duration||30);
-    var all=dayEvents.filter(function(e){return e.time});
-    for(var i=0;i<all.length;i++){
-      var a=all[i],ap=a.time.split(':').map(Number),aStart=ap[0]*60+ap[1],aEnd=aStart+(a.duration||30);
-      if(eStart<aEnd&&eEnd>aStart)return a.name;
-    }
-    return null;
-  }
-  function addEvent(ev){var c=checkConflict(ev);if(c){setConflict({ev:ev,with:c})}else{saveCal({...cal,events:[...events,{id:uid(),...ev,date:sd}]});setAddMode(null)}}
-  function forceAddEvent(ev){saveCal({...cal,events:[...events,{id:uid(),...ev,date:sd}]});setAddMode(null);setConflict(null)}
-  function addTask(t){saveCal({...cal,tasks:[...tasks,{id:uid(),...t,date:sd,done:false}]});setAddMode(null)}
-  function toggleTask(id){saveCal({...cal,tasks:tasks.map(function(t){return t.id===id?{...t,done:!t.done}:t})})}
-  function rmEvent(id){saveCal({...cal,events:events.filter(function(e){return e.id!==id})});setSelEvent(null)}
-  function rmTask(id){saveCal({...cal,tasks:tasks.filter(function(t){return t.id!==id})})}
-
-  function eventsOnDate(d){var k=dk(d);var count=events.filter(function(e){return e.date===k}).length;var dow2=d.getDay();if([1,2,3,4,5,6].includes(dow2))count++;if([1,2,3,4,5,6].includes(dow2))count++;return count}
-  function tasksOnDate(d){return tasks.filter(function(t){return t.date===dk(d)}).length}
-
-  // Buffer: add 10 min to all events
-  function displayTime(ev){if(!ev.time)return"Heldag";var t=ev.time;if(ev.buffer&&ev.duration){var mins=parseInt(t.split(":")[0])*60+parseInt(t.split(":")[1])-10;var h=Math.floor(mins/60);var m=mins%60;return String(h).padStart(2,"0")+":"+String(m).padStart(2,"0")+" (var där)"+" → "+t+" start"}return t+(ev.duration?" · "+ev.duration+"min":"")}
-
-  return(<div style={{padding:"14px 18px 100px",animation:"fi .2s ease-out"}}>
-    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-      <div style={{fontSize:20,fontWeight:800}}>Kalender</div>
-      <div style={{display:"flex",alignItems:"center",gap:6}}>
-        <button onClick={function(){try{if('Notification' in window){if(Notification.permission==='default')Notification.requestPermission();else if(Notification.permission==='granted')new Notification('KM Stack',{body:'Notiser aktiva ✓'})}}catch(e){}}} style={{background:"none",border:"none",cursor:"pointer",padding:4,opacity:(function(){try{return typeof Notification!=='undefined'&&Notification.permission==='granted'?1:0.3}catch(e){return 0.3}})()}}>
-          <span style={{fontSize:14}}>🔔</span>
-        </button>
-      <div style={{display:"flex",gap:3}}>
-        {[{k:"day",l:"Dag"},{k:"timeline",l:"Live"},{k:"week",l:"Vecka"},{k:"month",l:"Månad"}].map(function(v){return <button key={v.k} onClick={function(){setView(v.k)}} style={{padding:"5px 8px",borderRadius:6,border:view===v.k?"1px solid "+T.accent:"1px solid "+T.border,background:view===v.k?T.accent+"15":"transparent",color:view===v.k?T.accent:T.muted,fontSize:9,fontWeight:600,cursor:"pointer"}}>{v.l}</button>})}
+          <div style={{position:"absolute",left:-42,top:-5,width:42,textAlign:"right",paddingRight:8}}>
+            <span style={{fontSize:8,fontWeight:700,color:T.danger,fontFamily:"'JetBrains Mono'"}}>{String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0")}</span>
+          </div>
+        </div>}
       </div>
+    })()}
+    {/* Knappar */}
+    <div style={{display:"flex",gap:4}}>
+      <button onClick={function(){setAddMode("event")}} style={{flex:1,padding:10,borderRadius:8,border:"1px dashed "+T.accent,background:T.accent+"08",color:T.accent,fontSize:11,fontWeight:700,cursor:"pointer"}}>+ Event</button>
+      <button onClick={function(){setAddMode("task")}} style={{flex:1,padding:10,borderRadius:8,border:"1px dashed "+T.accent2,background:T.accent2+"08",color:T.accent2,fontSize:11,fontWeight:700,cursor:"pointer"}}>+ Task</button>
     </div>
+    {addMode==="event"&&<AddEvent onSave={addEvent} onClose={function(){setAddMode(null)}}/>}
+    {addMode==="task"&&<AddTask onSave={addTask} onClose={function(){setAddMode(null)}}/>}
+    {/* Recurring events list */}
+    {recurring.length>0&&<div style={{marginTop:12}}>
+      <button onClick={function(){setShowRecurring(!showRecurring)}} style={{display:"flex",alignItems:"center",gap:4,background:"none",border:"none",color:T.muted,fontSize:10,fontWeight:600,cursor:"pointer",marginBottom:showRecurring?6:0}}>
+        <span style={{transform:showRecurring?"rotate(90deg)":"rotate(0)",transition:"transform .15s",display:"inline-block"}}>▶</span>
+        🔁 Återkommande ({recurring.length})
+      </button>
+      {showRecurring&&recurring.map(function(r){
+        var colors={training:T.danger,peptide:T.accent,business:T.accent2,private:T.pin,health:T.success};
+        var cc=colors[r.category]||T.muted;
+        var label=r.repeat==="daily"?"Dagligen":r.days&&r.days.length?r.days.map(function(d){return DAYS_SV[d]}).join(", "):"";
+        return <div key={r.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:T.card,border:"1px solid "+T.border,borderRadius:8,marginBottom:2}}>
+          <div style={{width:3,height:24,borderRadius:2,background:cc,flexShrink:0}}/>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:11,fontWeight:600,color:cc}}>🔁 {r.name}</div>
+            <div style={{fontSize:9,color:T.subtle}}>{r.time||"—"} · {label}</div>
+          </div>
+          <button onClick={function(){rmRecurring(r.id)}} style={{background:"none",border:"none",cursor:"pointer",padding:2}}><Ic n="trash" s={12} c={T.subtle}/></button>
+        </div>
+      })}
+    </div>}
+    </div>}
 
-    {/* DAG-NAVIGERING */}
-    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-      <button onClick={function(){var n=new Date(selDate);n.setDate(n.getDate()-1);setSelDate(n)}} style={{background:T.card,border:"1px solid "+T.border,borderRadius:8,padding:"6px 10px",cursor:"pointer"}}><Ic n="chevL" s={16} c={T.text}/></button>
+
+    {/* DAGVY — enkel lista events + tasks */}
+    {view==="day"&&<div>
+    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+      <button onClick={function(){var n=new Date(selDate);n.setDate(n.getDate()-1);setSD(n)}} style={{background:T.card,border:"1px solid "+T.border,borderRadius:8,padding:"6px 10px",cursor:"pointer"}}><Ic n="chevL" s={16} c={T.text}/></button>
       <div style={{textAlign:"center"}}>
         <div style={{fontSize:16,fontWeight:700}}>{DAYS_FULL[dow]}</div>
-        <div style={{fontSize:11,color:T.muted}}>{selDate.getDate()+" "+MONTHS_FULL[selDate.getMonth()]+" "+selDate.getFullYear()}</div>
+        <div style={{fontSize:11,color:T.muted}}>{selDate.getDate()+" "+MONTHS_FULL[selDate.getMonth()]}</div>
       </div>
-      <button onClick={function(){var n=new Date(selDate);n.setDate(n.getDate()+1);setSelDate(n)}} style={{background:T.card,border:"1px solid "+T.border,borderRadius:8,padding:"6px 10px",cursor:"pointer"}}><Ic n="chevR" s={16} c={T.text}/></button>
+      <button onClick={function(){var n=new Date(selDate);n.setDate(n.getDate()+1);setSD(n)}} style={{background:T.card,border:"1px solid "+T.border,borderRadius:8,padding:"6px 10px",cursor:"pointer"}}><Ic n="chevR" s={16} c={T.text}/></button>
     </div>
-    <div style={{display:"flex",justifyContent:"center",marginBottom:14}}>
-      <button onClick={function(){setSelDate(new Date())}} style={{padding:"4px 14px",borderRadius:6,border:"1px solid "+(dk(selDate)===dk(new Date())?T.accent:T.border),background:dk(selDate)===dk(new Date())?T.accent+"15":"transparent",color:dk(selDate)===dk(new Date())?T.accent:T.muted,fontSize:10,fontWeight:600,cursor:"pointer"}}>Idag</button>
+    <div style={{textAlign:"center",marginBottom:14}}>
+      <button onClick={function(){setSD(new Date())}} style={{padding:"4px 14px",borderRadius:6,border:"1px solid "+(isToday?T.accent:T.border),background:isToday?T.accent+"15":"transparent",color:isToday?T.accent:T.muted,fontSize:10,fontWeight:600,cursor:"pointer"}}>Idag</button>
     </div>
-
-    {/* DAGVY — APPLE STYLE */}
-    {view==="day"&&<div>
-      {/* Tasks överst */}
-      {dayTasks.length>0&&<div style={{marginBottom:10}}>
-        {dayTasks.sort(function(a,b){var po={"high":0,"medium":1,"low":2};return(po[a.priority]||1)-(po[b.priority]||1)}).map(function(t){return <div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:T.card,border:"1px solid "+(t.done?T.success+"22":T.border),borderRadius:8,marginBottom:2,opacity:t.done?0.4:1}}>
-          <button onClick={function(){toggleTask(t.id)}} style={{width:18,height:18,borderRadius:4,border:t.done?"none":"2px solid "+T.border,background:t.done?T.success:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{t.done&&<Ic n="check" s={10} c="#fff"/>}</button>
-          <span style={{fontSize:9,flexShrink:0}}>{PRIO_L[t.priority]||"🟡"}</span>
-          <div style={{flex:1}}><div style={{fontSize:11,fontWeight:600,textDecoration:t.done?"line-through":"none"}}>{t.name}</div></div>
-          <button onClick={function(){rmTask(t.id)}} style={{background:"none",border:"none",cursor:"pointer",padding:2}}><Ic n="trash" s={10} c={T.subtle}/></button>
-        </div>})}
-      </div>}
-
-      {/* Timrutnät */}
-      {(function(){var startH=6,endH=23,now=new Date(),nowH=now.getHours(),nowMin=now.getMinutes(),isToday=dk(selDate)===dk(new Date());
-        var hours=[];for(var h=startH;h<=endH;h++)hours.push(h);
-        var tEvents=dayEvents.filter(function(e){return e.time}).map(function(e){
-          var p=e.time.split(":").map(Number);
-          return{...e,startM:p[0]*60+p[1],endM:p[0]*60+p[1]+(e.duration||30)}
-        });
-        var HOUR_H=56;
-        return <div style={{position:"relative",marginBottom:14}}>
-          {hours.map(function(h){
-            var hEvents=tEvents.filter(function(e){return e.startM<(h+1)*60&&e.endM>h*60});
-            return <div key={h} style={{display:"flex",minHeight:HOUR_H,borderBottom:"1px solid "+T.border+"44"}}>
-              <div style={{width:40,flexShrink:0,paddingTop:2,textAlign:"right",paddingRight:8}}>
-                <span style={{fontSize:9,fontWeight:600,fontFamily:"'JetBrains Mono'",color:T.subtle}}>{String(h).padStart(2,"0")}:00</span>
-              </div>
-              <div style={{flex:1,position:"relative",minHeight:HOUR_H}}>
-                {hEvents.map(function(ev){
-                  var top=Math.max(0,(ev.startM-h*60)/60)*HOUR_H;
-                  var height=Math.min(HOUR_H,((Math.min(ev.endM,(h+1)*60)-Math.max(ev.startM,h*60))/60)*HOUR_H);
-                  var cc=CAL_CATS[ev.category]||{c:T.muted};
-                  if(ev.startM>=h*60&&ev.startM<(h+1)*60)return <div key={ev.id} onClick={function(){if(!ev.auto)setSelEvent(ev)}} style={{position:"absolute",top:top,left:2,right:2,minHeight:Math.max(24,height),background:cc.c+"20",border:"1px solid "+cc.c+"44",borderLeft:"3px solid "+cc.c,borderRadius:6,padding:"3px 6px",cursor:ev.auto?"default":"pointer",overflow:"hidden",zIndex:2}}>
-                    <div style={{fontSize:10,fontWeight:700,color:cc.c,lineHeight:1.2}}>{ev.name}</div>
-                    <div style={{fontSize:8,color:T.subtle}}>{ev.time}{ev.duration?" · "+ev.duration+"m":""}{ev.place?" · "+ev.place:""}</div>
-                    {ev.auto&&<span style={{fontSize:7,color:T.subtle}}>AUTO</span>}
-                  </div>;
-                  return null;
-                })}
-              </div>
-            </div>
-          })}
-          {/* Nu-linje */}
-          {isToday&&nowH>=startH&&nowH<=endH&&<div style={{position:"absolute",left:40,right:0,top:((nowH-startH)*60+nowMin)/60*HOUR_H,zIndex:5,pointerEvents:"none"}}>
-            <div style={{display:"flex",alignItems:"center"}}>
-              <div style={{width:8,height:8,borderRadius:"50%",background:T.danger,marginLeft:-4}}/>
-              <div style={{flex:1,height:2,background:T.danger}}/>
-            </div>
-          </div>}
+    {/* Events lista */}
+    {dayEvents.filter(function(e){return e.time}).sort(function(a,b){return a.time.localeCompare(b.time)}).map(function(ev){
+      var colors={training:T.danger,peptide:T.accent,business:T.accent2,private:T.pin,health:T.success};
+      var cc=colors[ev.category]||T.muted;
+      if(ev.auto&&ev.duration>120)return null;
+      return <div key={ev.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",background:T.card,border:"1px solid "+T.border,borderRadius:8,marginBottom:3}}>
+        <div style={{width:3,height:28,borderRadius:2,background:cc,flexShrink:0}}/>
+        <div style={{width:42,flexShrink:0,fontSize:11,fontWeight:700,color:cc,fontFamily:"'JetBrains Mono'"}}>{ev.time}</div>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{fontSize:12,fontWeight:600}}>{ev.auto?"⚡ ":ev.recurring?"🔁 ":""}{ev.name}</div>
+          {ev.duration&&ev.duration<300&&<div style={{fontSize:9,color:T.subtle}}>{ev.duration} min{ev.detail?" · "+ev.detail:""}</div>}
         </div>
-      })()}
-
-      {/* Add buttons */}
-      <div style={{display:"flex",gap:4}}>
-        <button onClick={function(){setAddMode("event")}} style={{flex:1,padding:10,borderRadius:8,border:"1px dashed "+T.accent,background:T.accent+"08",color:T.accent,fontSize:11,fontWeight:700,cursor:"pointer"}}>+ Event</button>
-        <button onClick={function(){setAddMode("task")}} style={{flex:1,padding:10,borderRadius:8,border:"1px dashed "+T.accent2,background:T.accent2+"08",color:T.accent2,fontSize:11,fontWeight:700,cursor:"pointer"}}>+ Task</button>
+        {!ev.auto&&!ev.recurring&&<button onClick={function(){rmEvent(ev.id)}} style={{background:"none",border:"none",cursor:"pointer",padding:2}}><Ic n="trash" s={10} c={T.subtle}/></button>}
       </div>
-      {addMode==="event"&&<CalEventForm onSave={addEvent} onClose={function(){setAddMode(null)}}/>}
-      {addMode==="task"&&<CalTaskForm onSave={addTask} onClose={function(){setAddMode(null)}}/>}
-
-      {selEvent&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",backdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}} onClick={function(){setSelEvent(null)}}>
-        <div style={{background:T.card,border:"1px solid "+T.border,borderRadius:14,padding:20,width:"100%",maxWidth:340,animation:"fi .1s ease-out"}} onClick={function(e){e.stopPropagation()}}>
-          <div style={{fontSize:16,fontWeight:800,marginBottom:4}}>{selEvent.name}</div>
-          <div style={{fontSize:11,color:T.muted,marginBottom:4}}>{displayTime(selEvent)}</div>
-          {selEvent.place&&<div style={{fontSize:11,color:T.accent2,marginBottom:4}}>📍 {selEvent.place}</div>}
-          {selEvent.note&&<div style={{fontSize:11,color:T.text,marginBottom:10}}>{selEvent.note}</div>}
-          <div style={{display:"flex",gap:6}}>
-            <button onClick={function(){rmEvent(selEvent.id)}} style={{flex:1,padding:10,borderRadius:8,border:"1px solid "+T.danger,background:T.danger+"0d",color:T.danger,fontSize:12,fontWeight:600,cursor:"pointer"}}>Radera</button>
-            <button onClick={function(){setSelEvent(null)}} style={{flex:1,padding:10,borderRadius:8,border:"1px solid "+T.border,background:T.surface,color:T.muted,fontSize:12,fontWeight:600,cursor:"pointer"}}>Stäng</button>
-          </div>
-        </div>
-      </div>}
-      {conflict&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",backdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:250,padding:20}} onClick={function(){setConflict(null)}}>
-        <div style={{background:T.card,border:"1px solid "+T.warning+"44",borderRadius:14,padding:20,width:"100%",maxWidth:340,animation:"fi .1s ease-out"}} onClick={function(e){e.stopPropagation()}}>
-          <div style={{fontSize:14,fontWeight:800,color:T.warning,marginBottom:8}}>⚠️ Konflikt</div>
-          <div style={{fontSize:12,color:T.text,marginBottom:4}}><strong>{conflict.ev.name}</strong> krockar med <strong>{conflict.with}</strong></div>
-          <div style={{display:"flex",gap:6,marginTop:10}}>
-            <button onClick={function(){setConflict(null)}} style={{flex:1,padding:10,borderRadius:8,border:"1px solid "+T.border,background:T.surface,color:T.muted,fontSize:12,fontWeight:600,cursor:"pointer"}}>Avbryt</button>
-            <button onClick={function(){forceAddEvent(conflict.ev)}} style={{flex:1,padding:10,borderRadius:8,border:"none",background:T.warning,color:"#000",fontSize:12,fontWeight:700,cursor:"pointer"}}>Boka ändå</button>
-          </div>
-        </div>
-      </div>}
+    })}
+    {/* Tasks */}
+    {dayTasks.length>0&&<div style={{marginTop:10,marginBottom:8}}>
+      <div style={{fontSize:10,fontWeight:700,color:T.accent2,marginBottom:4}}>Tasks</div>
+      {dayTasks.map(function(t){return <div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:T.card,border:"1px solid "+(t.done?T.success+"22":T.border),borderRadius:8,marginBottom:2,opacity:t.done?0.4:1}}>
+        <button onClick={function(){toggleTask(t.id)}} style={{width:18,height:18,borderRadius:4,border:t.done?"none":"2px solid "+T.border,background:t.done?T.success:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{t.done&&<Ic n="check" s={10} c="#fff"/>}</button>
+        <div style={{flex:1}}><div style={{fontSize:11,fontWeight:600,textDecoration:t.done?"line-through":"none"}}>{t.name}</div></div>
+        <button onClick={function(){rmTask(t.id)}} style={{background:"none",border:"none",cursor:"pointer",padding:2}}><Ic n="trash" s={10} c={T.subtle}/></button>
+      </div>})}
+    </div>}
+    <div style={{display:"flex",gap:4,marginTop:10}}>
+      <button onClick={function(){setAddMode("event")}} style={{flex:1,padding:10,borderRadius:8,border:"1px dashed "+T.accent,background:T.accent+"08",color:T.accent,fontSize:11,fontWeight:700,cursor:"pointer"}}>+ Event</button>
+      <button onClick={function(){setAddMode("task")}} style={{flex:1,padding:10,borderRadius:8,border:"1px dashed "+T.accent2,background:T.accent2+"08",color:T.accent2,fontSize:11,fontWeight:700,cursor:"pointer"}}>+ Task</button>
+    </div>
+    {addMode==="event"&&<AddEvent onSave={addEvent} onClose={function(){setAddMode(null)}}/>}
+    {addMode==="task"&&<AddTask onSave={addTask} onClose={function(){setAddMode(null)}}/>}
     </div>}
 
-    {/* TIDSLINJE — LEVANDE */}
-    {view==="timeline"&&<div>
-      {/* Nästa upp */}
-      {(function(){var now=new Date(),nowM=now.getHours()*60+now.getMinutes();var isToday=dk(selDate)===dk(new Date());
-        if(!isToday)return null;
-        var upcoming=dayEvents.filter(function(e){if(!e.time)return false;var p=e.time.split(":").map(Number);return p[0]*60+p[1]>nowM}).sort(function(a,b){return a.time.localeCompare(b.time)});
-        if(!upcoming.length)return null;
-        var next=upcoming[0],np=next.time.split(":").map(Number),nextM=np[0]*60+np[1];
-        var diff=nextM-nowM,bufferM=nextM-10;
-        var bH=Math.floor(bufferM/60),bMi=bufferM%60;
-        var cc=CAL_CATS[next.category]||{c:T.accent};
-        return <div style={{background:"linear-gradient(135deg,"+cc.c+"18,"+cc.c+"08)",border:"1px solid "+cc.c+"33",borderRadius:14,padding:"14px 16px",marginBottom:14}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-            <div style={{fontSize:10,color:T.muted}}>NÄSTA UPP</div>
-            <div style={{fontSize:20,fontWeight:900,fontFamily:"'JetBrains Mono'",color:diff<=30?T.danger:cc.c}}>{diff>60?Math.floor(diff/60)+"h "+diff%60+"min":diff+"min"}</div>
-          </div>
-          <div style={{fontSize:16,fontWeight:800,color:T.text}}>{next.name}</div>
-          <div style={{fontSize:11,color:T.subtle,marginTop:2}}>{next.time}{next.place?" · 📍 "+next.place:""}{next.duration?" · "+next.duration+"min":""}</div>
-          <div style={{fontSize:10,color:cc.c,marginTop:4}}>Var där {String(bH).padStart(2,"0")+":"+String(bMi).padStart(2,"0")} (10 min buffert)</div>
-        </div>
-      })()}
-
-      {/* Tasks överst */}
-      {dayTasks.length>0&&<div style={{marginBottom:12}}>
-        {dayTasks.sort(function(a,b){var po={"high":0,"medium":1,"low":2};return(po[a.priority]||1)-(po[b.priority]||1)}).map(function(t){return <div key={t.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",background:T.card,border:"1px solid "+(t.done?T.success+"22":T.border),borderRadius:8,marginBottom:3,opacity:t.done?0.4:1}}>
-          <button onClick={function(){toggleTask(t.id)}} style={{width:20,height:20,borderRadius:5,border:t.done?"none":"2px solid "+T.border,background:t.done?T.success:"transparent",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{t.done&&<Ic n="check" s={12} c="#fff"/>}</button>
-          <span style={{fontSize:10,flexShrink:0}}>{PRIO_L[t.priority]||"🟡"}</span>
-          <div style={{flex:1}}><div style={{fontSize:12,fontWeight:600,textDecoration:t.done?"line-through":"none"}}>{t.name}</div>{t.time&&<div style={{fontSize:9,color:T.subtle}}>{t.time}</div>}</div>
-          <button onClick={function(){rmTask(t.id)}} style={{background:"none",border:"none",cursor:"pointer",padding:2}}><Ic n="trash" s={12} c={T.subtle}/></button>
-        </div>})}
-      </div>}
-
-      {/* Tidslinje */}
-      {(function(){var now=new Date(),nowH=now.getHours(),nowMin=now.getMinutes(),nowM=nowH*60+nowMin;
-        var isToday=dk(selDate)===dk(new Date());
-        var allItems=dayEvents.filter(function(e){return e.time}).map(function(e){var p=e.time.split(":").map(Number);return{...e,mins:p[0]*60+p[1],isEvent:true}}).concat(
-          dayTasks.filter(function(t){return t.time}).map(function(t){var p=t.time.split(":").map(Number);return{...t,mins:p[0]*60+p[1],isTask:true}})
-        ).sort(function(a,b){return a.mins-b.mins});
-
-        // Add heldag events
-        var heldagEvents=dayEvents.filter(function(e){return!e.time});
-
-        if(!allItems.length&&!heldagEvents.length&&!dayTasks.filter(function(t){return!t.time}).length)return <div style={{textAlign:"center",padding:30,color:T.subtle,fontSize:12}}>Ingen planerad</div>;
-
-        return <div style={{position:"relative",paddingLeft:50}}>
-          {/* Heldag events */}
-          {heldagEvents.map(function(ev){var cc=CAL_CATS[ev.category]||{c:T.muted};return <div key={ev.id} style={{marginBottom:6,marginLeft:4,padding:"6px 10px",background:cc.c+"12",border:"1px solid "+cc.c+"33",borderRadius:8}}>
-            <div style={{fontSize:11,fontWeight:600,color:cc.c}}>{ev.name}</div>
-          </div>})}
-
-          {/* Tidsblock */}
-          {allItems.map(function(item,i){
-            var h=Math.floor(item.mins/60),m=item.mins%60;
-            var timeStr=String(h).padStart(2,"0")+":"+String(m).padStart(2,"0");
-            var isPast=isToday&&item.mins<nowM;
-            var isCurrent=isToday&&item.mins<=nowM&&item.mins+(item.duration||30)>nowM;
-            var cc=item.isTask?{c:PRIO_C[item.priority]||T.accent2}:CAL_CATS[item.category]||{c:T.muted};
-
-            return <div key={item.id||i} style={{position:"relative",marginBottom:2}}>
-              {/* "Du är här"-linje */}
-              {isToday&&i>0&&allItems[i-1].mins<nowM&&item.mins>=nowM&&<div style={{position:"relative",margin:"8px 0",marginLeft:-50}}>
-                <div style={{display:"flex",alignItems:"center",gap:6}}>
-                  <div style={{fontSize:9,fontWeight:800,color:T.danger,width:44,textAlign:"right",fontFamily:"'JetBrains Mono'"}}>{String(nowH).padStart(2,"0")+":"+String(nowMin).padStart(2,"0")}</div>
-                  <div style={{flex:1,height:2,background:T.danger,borderRadius:1}}/>
-                </div>
-                <div style={{position:"absolute",left:44,top:-4,width:10,height:10,borderRadius:"50%",background:T.danger}}/>
-              </div>}
-
-              <div style={{display:"flex",gap:8,alignItems:"flex-start"}}>
-                <div style={{position:"absolute",left:-50,width:44,textAlign:"right",fontSize:10,fontWeight:600,fontFamily:"'JetBrains Mono'",color:isPast?T.subtle:isCurrent?T.danger:T.muted,paddingTop:8}}>{timeStr}</div>
-                <div onClick={function(){if(item.isEvent&&!item.auto)setSelEvent(item)}} style={{flex:1,padding:"8px 12px",background:isCurrent?cc.c+"15":isPast?T.card:T.card,border:"1px solid "+(isCurrent?cc.c+"44":isPast?T.border+"66":T.border),borderRadius:8,opacity:isPast?0.5:1,cursor:item.isEvent&&!item.auto?"pointer":"default",borderLeft:"3px solid "+cc.c}}>
-                  <div style={{fontSize:12,fontWeight:600,color:isPast?T.subtle:T.text}}>{item.name}</div>
-                  <div style={{fontSize:9,color:T.subtle}}>{item.duration?item.duration+"min":""}{item.place?" · 📍 "+item.place:""}{item.auto?" · AUTO":""}</div>
-                </div>
-              </div>
-            </div>
-          })}
-
-          {/* "Du är här" om efter alla events */}
-          {isToday&&allItems.length>0&&allItems[allItems.length-1].mins<nowM&&<div style={{position:"relative",margin:"8px 0",marginLeft:-50}}>
-            <div style={{display:"flex",alignItems:"center",gap:6}}>
-              <div style={{fontSize:9,fontWeight:800,color:T.danger,width:44,textAlign:"right",fontFamily:"'JetBrains Mono'"}}>{String(nowH).padStart(2,"0")+":"+String(nowMin).padStart(2,"0")}</div>
-              <div style={{flex:1,height:2,background:T.danger,borderRadius:1}}/>
-            </div>
-            <div style={{position:"absolute",left:44,top:-4,width:10,height:10,borderRadius:"50%",background:T.danger}}/>
-          </div>}
-
-          {/* "Du är här" om före alla events */}
-          {isToday&&allItems.length>0&&allItems[0].mins>nowM&&<div style={{position:"absolute",top:0,left:0,right:0,marginBottom:8}}>
-            <div style={{display:"flex",alignItems:"center",gap:6}}>
-              <div style={{fontSize:9,fontWeight:800,color:T.danger,width:44,textAlign:"right",fontFamily:"'JetBrains Mono'"}}>{String(nowH).padStart(2,"0")+":"+String(nowMin).padStart(2,"0")}</div>
-              <div style={{flex:1,height:2,background:T.danger,borderRadius:1}}/>
-            </div>
-          </div>}
-        </div>
-      })()}
-
-      {/* Add buttons */}
-      <div style={{display:"flex",gap:4,marginTop:14}}>
-        <button onClick={function(){setAddMode("event")}} style={{flex:1,padding:10,borderRadius:8,border:"1px dashed "+T.accent,background:T.accent+"08",color:T.accent,fontSize:11,fontWeight:700,cursor:"pointer"}}>+ Event</button>
-        <button onClick={function(){setAddMode("task")}} style={{flex:1,padding:10,borderRadius:8,border:"1px dashed "+T.accent2,background:T.accent2+"08",color:T.accent2,fontSize:11,fontWeight:700,cursor:"pointer"}}>+ Task</button>
-      </div>
-
-      {addMode==="event"&&<CalEventForm onSave={addEvent} onClose={function(){setAddMode(null)}}/>}
-      {addMode==="task"&&<CalTaskForm onSave={addTask} onClose={function(){setAddMode(null)}}/>}
-
-      {selEvent&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",backdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}} onClick={function(){setSelEvent(null)}}>
-        <div style={{background:T.card,border:"1px solid "+T.border,borderRadius:14,padding:20,width:"100%",maxWidth:340,animation:"fi .1s ease-out"}} onClick={function(e){e.stopPropagation()}}>
-          <div style={{fontSize:16,fontWeight:800,marginBottom:4}}>{selEvent.name}</div>
-          <div style={{fontSize:11,color:T.muted,marginBottom:4}}>{displayTime(selEvent)}</div>
-          {selEvent.place&&<div style={{fontSize:11,color:T.accent2,marginBottom:4}}>📍 {selEvent.place}</div>}
-          {selEvent.note&&<div style={{fontSize:11,color:T.text,marginBottom:10}}>{selEvent.note}</div>}
-          <div style={{display:"flex",gap:6}}>
-            <button onClick={function(){rmEvent(selEvent.id)}} style={{flex:1,padding:10,borderRadius:8,border:"1px solid "+T.danger,background:T.danger+"0d",color:T.danger,fontSize:12,fontWeight:600,cursor:"pointer"}}>Radera</button>
-            <button onClick={function(){setSelEvent(null)}} style={{flex:1,padding:10,borderRadius:8,border:"1px solid "+T.border,background:T.surface,color:T.muted,fontSize:12,fontWeight:600,cursor:"pointer"}}>Stäng</button>
-          </div>
-        </div>
-      </div>}
-
-      {/* Konfliktvarning */}
-      {conflict&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",backdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:250,padding:20}} onClick={function(){setConflict(null)}}>
-        <div style={{background:T.card,border:"1px solid "+T.warning+"44",borderRadius:14,padding:20,width:"100%",maxWidth:340,animation:"fi .1s ease-out"}} onClick={function(e){e.stopPropagation()}}>
-          <div style={{fontSize:14,fontWeight:800,color:T.warning,marginBottom:8}}>⚠️ Konflikt</div>
-          <div style={{fontSize:12,color:T.text,marginBottom:4}}><strong>{conflict.ev.name}</strong> krockar med <strong>{conflict.with}</strong></div>
-          <div style={{fontSize:11,color:T.subtle,marginBottom:14}}>Tiderna överlappar. Vill du boka ändå?</div>
-          <div style={{display:"flex",gap:6}}>
-            <button onClick={function(){setConflict(null)}} style={{flex:1,padding:10,borderRadius:8,border:"1px solid "+T.border,background:T.surface,color:T.muted,fontSize:12,fontWeight:600,cursor:"pointer"}}>Avbryt</button>
-            <button onClick={function(){forceAddEvent(conflict.ev)}} style={{flex:1,padding:10,borderRadius:8,border:"none",background:T.warning,color:"#000",fontSize:12,fontWeight:700,cursor:"pointer"}}>Boka ändå</button>
-          </div>
-        </div>
-      </div>}
-    </div>}
+    {/* VECKOVY */}
     {view==="week"&&(function(){
-      var weekStart=new Date(selDate);weekStart.setDate(weekStart.getDate()-weekStart.getDay());
-      var weekDays=[];for(var i=0;i<7;i++){var d=new Date(weekStart);d.setDate(d.getDate()+i);weekDays.push(d)}
-      function getAutoForDate(date){var dw=date.getDay(),dd=date.getDate(),ae=[];
-        if([1,3,5].includes(dw))ae.push({name:"MMA",time:"17:30",dur:60,c:T.danger});
-        if([2,4].includes(dw))ae.push({name:"Muay Thai",time:"19:00",dur:90,c:T.danger});
-        if(dw===6)ae.push({name:"Sparring",time:"12:00",dur:60,c:T.danger});
-        if(dw!==0)ae.push({name:"Gym",time:[2,4].includes(dw)?"17:00":"18:30",dur:[1,3,5].includes(dw)?30:60,c:T.danger});
-        if(dd===25)ae.push({name:"Lönedag",c:T.success});
-        PLAN_DATA.forEach(function(p){
-          if(p.start&&dk(date)===p.start)ae.push({name:p.name+" START",c:"#00b894"});
-          if(p.pauses)p.pauses.forEach(function(pa){if(dk(date)===pa.from)ae.push({name:p.name+" PAUS",c:T.warning});if(dk(date)===pa.to)ae.push({name:p.name+" RESTART",c:"#00b894"})});
-        });
-        return ae}
+      var ws=new Date(selDate);ws.setDate(ws.getDate()-ws.getDay());
+      var wd=[];for(var i=0;i<7;i++){var d=new Date(ws);d.setDate(d.getDate()+i);wd.push(d)}
+      var wn=Math.ceil((ws.getTime()-new Date(ws.getFullYear(),0,1).getTime())/604800000);
       return <div>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-          <button onClick={function(){var n=new Date(selDate);n.setDate(n.getDate()-7);setSelDate(n)}} style={{background:T.card,border:"1px solid "+T.border,borderRadius:6,padding:"4px 8px",cursor:"pointer"}}><Ic n="chevL" s={14} c={T.text}/></button>
-          <div style={{fontSize:13,fontWeight:700}}>V{Math.ceil((weekStart.getTime()-new Date(weekStart.getFullYear(),0,1).getTime())/604800000)}</div>
-          <button onClick={function(){var n=new Date(selDate);n.setDate(n.getDate()+7);setSelDate(n)}} style={{background:T.card,border:"1px solid "+T.border,borderRadius:6,padding:"4px 8px",cursor:"pointer"}}><Ic n="chevR" s={14} c={T.text}/></button>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+          <button onClick={function(){var n=new Date(selDate);n.setDate(n.getDate()-7);setSD(n)}} style={{background:T.card,border:"1px solid "+T.border,borderRadius:8,padding:"6px 10px",cursor:"pointer"}}><Ic n="chevL" s={16} c={T.text}/></button>
+          <div style={{fontSize:14,fontWeight:700}}>Vecka {wn}</div>
+          <button onClick={function(){var n=new Date(selDate);n.setDate(n.getDate()+7);setSD(n)}} style={{background:T.card,border:"1px solid "+T.border,borderRadius:8,padding:"6px 10px",cursor:"pointer"}}><Ic n="chevR" s={16} c={T.text}/></button>
         </div>
-        {weekDays.map(function(d){
-          var k=dk(d),isToday=k===dk(new Date()),isSel=k===sd;
-          var de=events.filter(function(e){return e.date===k});
-          var re=events.filter(function(e){return e.recurring&&e.date!==k&&matchesRecurring(e,k)});
-          var ae=getAutoForDate(d);
+        {wd.map(function(d){
+          var k=dk(d),it=k===dk(new Date()),is=k===sd;
+          var de=events.filter(function(e){return e.date===k}).concat(showAuto?getAutoEvents(k):[]).concat(getRecurringForDate(recurring,k)).concat(getOuraWorkouts(ouraCache,k));
           var dt=tasks.filter(function(t){return t.date===k});
-          var allCount=de.length+re.length+ae.length+dt.length;
-          return <div key={k} onClick={function(){setSelDate(d);setView("day")}} style={{display:"flex",gap:8,padding:"10px 12px",background:isSel?T.accent+"10":isToday?T.surface:T.card,border:"1px solid "+(isSel?T.accent+"33":T.border),borderRadius:10,marginBottom:4,cursor:"pointer",alignItems:"flex-start"}}>
-            <div style={{width:40,flexShrink:0,textAlign:"center"}}>
-              <div style={{fontSize:9,fontWeight:600,color:isToday?T.accent:T.muted}}>{DAYS_SV[d.getDay()]}</div>
-              <div style={{fontSize:18,fontWeight:800,color:isToday?T.accent:T.text}}>{d.getDate()}</div>
+          var tot=de.length+dt.length;
+          return <div key={k} onClick={function(){setSD(d);setView("timeline")}} style={{display:"flex",gap:10,padding:"10px 12px",background:is?T.accent+"10":it?T.surface:T.card,border:"1px solid "+(is?T.accent+"33":T.border),borderRadius:10,marginBottom:4,cursor:"pointer"}}>
+            <div style={{width:38,flexShrink:0,textAlign:"center"}}>
+              <div style={{fontSize:9,fontWeight:600,color:it?T.accent:T.muted}}>{DAYS_SV[d.getDay()]}</div>
+              <div style={{fontSize:18,fontWeight:800,color:it?T.accent:T.text}}>{d.getDate()}</div>
             </div>
             <div style={{flex:1,minWidth:0}}>
-              {allCount===0&&<div style={{fontSize:11,color:T.subtle,paddingTop:4}}>Ledig</div>}
-              {ae.slice(0,3).map(function(e,i){return <div key={i} style={{fontSize:10,color:e.c,fontWeight:600,marginBottom:1}}>{e.time?e.time+" ":""}{e.name}</div>})}
-              {de.concat(re).slice(0,2).map(function(e){var cc=CAL_CATS[e.category]||{c:T.muted};return <div key={e.id} style={{fontSize:10,color:cc.c,fontWeight:600,marginBottom:1}}>{e.time?e.time+" ":""}{e.name}</div>})}
-              {dt.slice(0,2).map(function(t){return <div key={t.id} style={{fontSize:10,color:t.done?T.subtle:PRIO_C[t.priority]||T.accent2,fontWeight:600,marginBottom:1,textDecoration:t.done?"line-through":"none"}}>{PRIO_L[t.priority]||"🟡"} {t.name}</div>})}
-              {allCount>5&&<div style={{fontSize:9,color:T.subtle}}>+{allCount-5} mer</div>}
+              {tot===0&&<div style={{fontSize:11,color:T.subtle,paddingTop:4}}>Ledig</div>}
+              {de.filter(function(e){return e.name!=="Jobb"}).slice(0,3).map(function(e){var colors={training:T.danger,peptide:T.accent,business:T.accent2,private:T.pin,health:T.success};return <div key={e.id} style={{fontSize:10,color:colors[e.category]||T.muted,fontWeight:600,marginBottom:1}}>{e.time?e.time+" ":""}{e.auto?"⚡ ":e.recurring?"🔁 ":""}{e.name}</div>})}
+              {dt.slice(0,2).map(function(t){var pc={high:"#ff6b6b",medium:"#fdcb6e",low:"#00b894"};return <div key={t.id} style={{fontSize:10,color:t.done?T.subtle:pc[t.priority]||T.accent2,fontWeight:600,marginBottom:1,textDecoration:t.done?"line-through":"none"}}>{t.name}</div>})}
+              {tot>5&&<div style={{fontSize:9,color:T.subtle}}>+{tot-5} mer</div>}
             </div>
-            <div style={{fontSize:10,fontWeight:700,color:T.subtle,fontFamily:"'JetBrains Mono'",paddingTop:4}}>{allCount>0?allCount:""}</div>
+            {tot>0&&<div style={{fontSize:10,fontWeight:700,color:T.subtle,fontFamily:"'JetBrains Mono'",paddingTop:4}}>{tot}</div>}
           </div>
         })}
       </div>
     })()}
 
     {/* MÅNADSVY */}
-    {view==="month"&&<div>
-      {(function(){var y=selDate.getFullYear(),m=selDate.getMonth();var first=new Date(y,m,1).getDay();var dim=new Date(y,m+1,0).getDate();var cells=[];for(var i=0;i<first;i++)cells.push(null);for(var i=1;i<=dim;i++)cells.push(i);
-        return <div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-            <button onClick={function(){setSelDate(new Date(y,m-1,1))}} style={{background:T.card,border:"1px solid "+T.border,borderRadius:6,padding:"4px 8px",cursor:"pointer"}}><Ic n="chevL" s={14} c={T.text}/></button>
-            <div style={{fontSize:14,fontWeight:700}}>{MONTHS_FULL[m]} {y}</div>
-            <button onClick={function(){setSelDate(new Date(y,m+1,1))}} style={{background:T.card,border:"1px solid "+T.border,borderRadius:6,padding:"4px 8px",cursor:"pointer"}}><Ic n="chevR" s={14} c={T.text}/></button>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:6}}>
-            {DAYS_SV.map(function(d){return <div key={d} style={{textAlign:"center",fontSize:9,color:T.subtle,fontWeight:600,padding:4}}>{d}</div>})}
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
-            {cells.map(function(day,i){if(!day)return <div key={i}/>;var dd=new Date(y,m,day);var isToday=dk(dd)===dk(new Date());var isSel=dk(dd)===sd;var ec=eventsOnDate(dd);var tc=tasksOnDate(dd);
-              return <div key={i} onClick={function(){setSelDate(dd);setView("day")}} style={{textAlign:"center",padding:"6px 2px",borderRadius:8,background:isSel?T.accent+"20":isToday?T.surface:"transparent",border:isSel?"1px solid "+T.accent:"1px solid transparent",cursor:"pointer",minHeight:40}}>
-                <div style={{fontSize:12,fontWeight:isToday?800:500,color:isToday?T.accent:T.text}}>{day}</div>
-                {(ec>0||tc>0)&&<div style={{display:"flex",justifyContent:"center",gap:2,marginTop:2}}>
-                  {ec>0&&<div style={{width:4,height:4,borderRadius:"50%",background:T.accent}}/>}
-                  {tc>0&&<div style={{width:4,height:4,borderRadius:"50%",background:T.accent2}}/>}
-                </div>}
-              </div>
-            })}
-          </div>
+    {view==="month"&&(function(){
+      var y=selDate.getFullYear(),m=selDate.getMonth();
+      var first=new Date(y,m,1).getDay(),dim=new Date(y,m+1,0).getDate();
+      var cells=[];for(var i=0;i<first;i++)cells.push(null);for(var i=1;i<=dim;i++)cells.push(i);
+      return <div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+          <button onClick={function(){setSD(new Date(y,m-1,1))}} style={{background:T.card,border:"1px solid "+T.border,borderRadius:8,padding:"6px 10px",cursor:"pointer"}}><Ic n="chevL" s={16} c={T.text}/></button>
+          <div style={{fontSize:14,fontWeight:700}}>{MONTHS_FULL[m]} {y}</div>
+          <button onClick={function(){setSD(new Date(y,m+1,1))}} style={{background:T.card,border:"1px solid "+T.border,borderRadius:8,padding:"6px 10px",cursor:"pointer"}}><Ic n="chevR" s={16} c={T.text}/></button>
         </div>
-      })()}
-    </div>}
+        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2,marginBottom:6}}>
+          {DAYS_SV.map(function(d){return <div key={d} style={{textAlign:"center",fontSize:9,color:T.subtle,fontWeight:600,padding:4}}>{d}</div>})}
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(7,1fr)",gap:2}}>
+          {cells.map(function(day,i){
+            if(!day)return <div key={i}/>;
+            var dd=new Date(y,m,day),k=dk(dd);
+            var it=k===dk(new Date()),is=k===sd;
+            var ec=eventsOn(k),tc=tasksOn(k);
+            return <div key={i} onClick={function(){setSD(dd);setView("timeline")}} style={{textAlign:"center",padding:"6px 2px",borderRadius:8,background:is?T.accent+"20":it?T.surface:"transparent",border:is?"1px solid "+T.accent:"1px solid transparent",cursor:"pointer",minHeight:40}}>
+              <div style={{fontSize:12,fontWeight:it?800:500,color:it?T.accent:T.text}}>{day}</div>
+              {(ec>0||tc>0)&&<div style={{display:"flex",justifyContent:"center",gap:2,marginTop:2}}>
+                {ec>0&&<div style={{width:4,height:4,borderRadius:"50%",background:T.accent}}/>}
+                {tc>0&&<div style={{width:4,height:4,borderRadius:"50%",background:T.accent2}}/>}
+              </div>}
+            </div>
+          })}
+        </div>
+      </div>
+    })()}
   </div>);
 }
-
-function CalEventForm({onSave,onClose}){
-  const[name,setName]=useState("");const[time,setTime]=useState("");const[dur,setDur]=useState("");const[cat,setCat]=useState("private");const[place,setPlace]=useState("");const[notify,setNotify]=useState("15");const[note,setNote]=useState("");const[recur,setRecur]=useState("");const[days,setDays]=useState([]);const[more,setMore]=useState(false);
-  function toggleDay(d){setDays(function(p){return p.includes(d)?p.filter(function(x){return x!==d}):[...p,d]})}
+function AddEvent({onSave,onClose}){
+  const[n,sN]=useState("");const[t,sT]=useState("");const[d,sD]=useState("");const[c,sC]=useState("private");
+  const[rep,sRep]=useState("none");const[days,sDays]=useState([]);
+  function toggleDay(x){sDays(function(p){return p.includes(x)?p.filter(function(dd){return dd!==x}):[...p,x]})}
+  var cats={training:{l:"Träning",c:T.danger},peptide:{l:"Peptider",c:T.accent},business:{l:"Företag",c:T.accent2},private:{l:"Privat",c:T.pin},health:{l:"Hälsa",c:T.success}};
   return(<div style={{background:T.card,border:"1px solid "+T.accent+"33",borderRadius:12,padding:14,marginTop:10,animation:"fi .15s ease-out"}}>
-    <input value={name} onChange={function(e){setName(e.target.value)}} placeholder="Vad?" autoFocus style={{width:"100%",padding:"10px 12px",borderRadius:8,border:"1px solid "+T.border,background:T.surface,color:T.text,fontSize:14,fontWeight:600,outline:"none",marginBottom:6}}/>
-    <div style={{display:"flex",gap:4,marginBottom:8}}>
-      <input value={time} onChange={function(e){setTime(e.target.value)}} type="time" style={{flex:1,padding:"8px 10px",borderRadius:8,border:"1px solid "+T.border,background:T.surface,color:T.text,fontSize:12,outline:"none"}}/>
-      <input value={dur} onChange={function(e){setDur(e.target.value)}} placeholder="Min" type="number" style={{width:55,padding:"8px 10px",borderRadius:8,border:"1px solid "+T.border,background:T.surface,color:T.text,fontSize:12,outline:"none"}}/>
-      <button onClick={function(){setMore(!more)}} style={{padding:"6px 10px",borderRadius:8,border:"1px solid "+T.border,background:more?T.accent+"15":"transparent",color:more?T.accent:T.muted,fontSize:10,fontWeight:600,cursor:"pointer"}}>⚙</button>
+    <input value={n} onChange={function(e){sN(e.target.value)}} placeholder="Vad?" autoFocus style={{width:"100%",padding:"10px 12px",borderRadius:8,border:"1px solid "+T.border,background:T.surface,color:T.text,fontSize:14,fontWeight:600,outline:"none",marginBottom:6}}/>
+    <div style={{display:"flex",gap:4,marginBottom:6}}>
+      <input value={t} onChange={function(e){sT(e.target.value)}} type="time" style={{flex:1,padding:"8px 10px",borderRadius:8,border:"1px solid "+T.border,background:T.surface,color:T.text,fontSize:12,outline:"none"}}/>
+      <input value={d} onChange={function(e){sD(e.target.value)}} placeholder="Min" type="number" style={{width:55,padding:"8px 10px",borderRadius:8,border:"1px solid "+T.border,background:T.surface,color:T.text,fontSize:12,outline:"none"}}/>
     </div>
-    {more&&<div style={{animation:"fi .1s ease-out"}}>
-      <input value={place} onChange={function(e){setPlace(e.target.value)}} placeholder="📍 Plats" style={{width:"100%",padding:"7px 12px",borderRadius:8,border:"1px solid "+T.border,background:T.surface,color:T.text,fontSize:11,outline:"none",marginBottom:5}}/>
-      <input value={note} onChange={function(e){setNote(e.target.value)}} placeholder="Anteckning" style={{width:"100%",padding:"7px 12px",borderRadius:8,border:"1px solid "+T.border,background:T.surface,color:T.text,fontSize:11,outline:"none",marginBottom:5}}/>
-      <div style={{display:"flex",flexWrap:"wrap",gap:3,marginBottom:5}}>
-        {Object.entries(CAL_CATS).map(function([k,v]){return <button key={k} onClick={function(){setCat(k)}} style={{padding:"3px 7px",borderRadius:5,border:cat===k?"1px solid "+v.c:"1px solid "+T.border,background:cat===k?v.c+"18":"transparent",color:cat===k?v.c:T.muted,fontSize:9,fontWeight:600,cursor:"pointer"}}>{v.l}</button>})}
-      </div>
-      <div style={{fontSize:9,color:T.muted,marginBottom:3}}>Upprepa</div>
-      <div style={{display:"flex",gap:3,marginBottom:4}}>
-        {[{k:"",l:"Aldrig"},{k:"daily",l:"Dagligen"},{k:"weekly",l:"Vecka"},{k:"biweekly",l:"Varannan"},{k:"monthly",l:"Månad"},{k:"specific",l:"Dagar"}].map(function(r){return <button key={r.k} onClick={function(){setRecur(r.k)}} style={{padding:"3px 6px",borderRadius:4,border:recur===r.k?"1px solid "+T.accent2:"1px solid "+T.border,background:recur===r.k?T.accent2+"15":"transparent",color:recur===r.k?T.accent2:T.muted,fontSize:8,fontWeight:600,cursor:"pointer"}}>{r.l}</button>})}
-      </div>
-      {recur==="specific"&&<div style={{display:"flex",gap:3,marginBottom:5}}>
-        {DAYS_SV.map(function(d,i){return <button key={i} onClick={function(){toggleDay(i)}} style={{width:34,height:28,borderRadius:5,border:days.includes(i)?"1px solid "+T.accent:"1px solid "+T.border,background:days.includes(i)?T.accent+"15":"transparent",color:days.includes(i)?T.accent:T.subtle,fontSize:9,fontWeight:600,cursor:"pointer"}}>{d}</button>})}
-      </div>}
-      <div style={{display:"flex",gap:3,marginBottom:5}}>
-        <span style={{fontSize:9,color:T.muted,padding:"4px 0"}}>🔔</span>
-        {["5","15","30","60"].map(function(m){return <button key={m} onClick={function(){setNotify(m)}} style={{padding:"3px 7px",borderRadius:4,border:notify===m?"1px solid "+T.accent:"1px solid "+T.border,background:notify===m?T.accent+"15":"transparent",color:notify===m?T.accent:T.muted,fontSize:8,fontWeight:600,cursor:"pointer"}}>{m}m</button>})}
-      </div>
+    <div style={{display:"flex",flexWrap:"wrap",gap:3,marginBottom:8}}>
+      {Object.entries(cats).map(function(x){return <button key={x[0]} onClick={function(){sC(x[0])}} style={{padding:"4px 8px",borderRadius:5,border:c===x[0]?"1px solid "+x[1].c:"1px solid "+T.border,background:c===x[0]?x[1].c+"18":"transparent",color:c===x[0]?x[1].c:T.muted,fontSize:9,fontWeight:600,cursor:"pointer"}}>{x[1].l}</button>})}
+    </div>
+    <div style={{fontSize:10,color:T.muted,marginBottom:4}}>Upprepa</div>
+    <div style={{display:"flex",gap:3,marginBottom:6}}>
+      {[{k:"none",l:"Engång"},{k:"daily",l:"Dagligen"},{k:"weekly",l:"Veckovis"}].map(function(r){return <button key={r.k} onClick={function(){sRep(r.k)}} style={{flex:1,padding:"5px 0",borderRadius:6,border:rep===r.k?"1px solid "+T.accent:"1px solid "+T.border,background:rep===r.k?T.accent+"15":"transparent",color:rep===r.k?T.accent:T.muted,fontSize:9,fontWeight:600,cursor:"pointer"}}>{r.l}</button>})}
+    </div>
+    {rep==="weekly"&&<div style={{display:"flex",gap:3,marginBottom:8}}>
+      {DAYS_SV.map(function(dn,i){return <button key={i} onClick={function(){toggleDay(i)}} style={{width:34,height:28,borderRadius:6,border:days.includes(i)?"1px solid "+T.accent:"1px solid "+T.border,background:days.includes(i)?T.accent+"18":"transparent",color:days.includes(i)?T.accent:T.subtle,fontSize:9,fontWeight:600,cursor:"pointer"}}>{dn}</button>})}
     </div>}
     <div style={{display:"flex",gap:6}}>
       <button onClick={onClose} style={{flex:1,padding:9,borderRadius:8,border:"1px solid "+T.border,background:"transparent",color:T.muted,fontSize:11,fontWeight:600,cursor:"pointer"}}>Avbryt</button>
-      <button onClick={function(){if(name.trim())onSave({name:name.trim(),time:time,duration:Number(dur)||0,category:cat,place:place,note:note,notify:Number(notify),buffer:true,recurring:recur==="specific"?undefined:recur||undefined,specificDays:recur==="specific"?days:undefined})}} style={{flex:2,padding:9,borderRadius:8,border:"none",background:T.accent,color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",opacity:name?"1":"0.4"}}>Spara</button>
+      <button onClick={function(){if(n.trim())onSave({name:n.trim(),time:t,duration:Number(d)||30,category:c,repeat:rep,days:days})}} style={{flex:2,padding:9,borderRadius:8,border:"none",background:T.accent,color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",opacity:n?"1":"0.4"}}>Spara</button>
     </div>
   </div>);
 }
-
-function CalTaskForm({onSave,onClose}){
-  const[name,setName]=useState("");const[time,setTime]=useState("");const[prio,setPrio]=useState("medium");
+function AddTask({onSave,onClose}){
+  const[n,sN]=useState("");const[p,sP]=useState("medium");
   return(<div style={{background:T.card,border:"1px solid "+T.accent2+"33",borderRadius:12,padding:14,marginTop:10,animation:"fi .15s ease-out"}}>
-    <div style={{fontSize:13,fontWeight:700,color:T.accent2,marginBottom:8}}>Ny task</div>
-    <input value={name} onChange={function(e){setName(e.target.value)}} placeholder="Vad ska göras?" autoFocus style={{width:"100%",padding:"9px 12px",borderRadius:8,border:"1px solid "+T.border,background:T.surface,color:T.text,fontSize:13,fontWeight:600,outline:"none",marginBottom:6}}/>
-    <input value={time} onChange={function(e){setTime(e.target.value)}} placeholder="Tid (valfritt)" type="time" style={{width:"100%",padding:"7px 12px",borderRadius:8,border:"1px solid "+T.border,background:T.surface,color:T.text,fontSize:11,outline:"none",marginBottom:6}}/>
+    <input value={n} onChange={function(e){sN(e.target.value)}} placeholder="Vad ska göras?" autoFocus style={{width:"100%",padding:"10px 12px",borderRadius:8,border:"1px solid "+T.border,background:T.surface,color:T.text,fontSize:14,fontWeight:600,outline:"none",marginBottom:6}}/>
     <div style={{display:"flex",gap:4,marginBottom:8}}>
-      {[{k:"high",l:"🔴 Hög"},{k:"medium",l:"🟡 Medium"},{k:"low",l:"🟢 Låg"}].map(function(p){return <button key={p.k} onClick={function(){setPrio(p.k)}} style={{flex:1,padding:"6px 0",borderRadius:6,border:prio===p.k?"1px solid "+PRIO_C[p.k]:"1px solid "+T.border,background:prio===p.k?PRIO_C[p.k]+"18":"transparent",color:prio===p.k?PRIO_C[p.k]:T.muted,fontSize:10,fontWeight:600,cursor:"pointer"}}>{p.l}</button>})}
+      {[{k:"high",l:"Hög",c:"#ff6b6b"},{k:"medium",l:"Medium",c:"#fdcb6e"},{k:"low",l:"Låg",c:"#00b894"}].map(function(x){return <button key={x.k} onClick={function(){sP(x.k)}} style={{flex:1,padding:"6px 0",borderRadius:6,border:p===x.k?"1px solid "+x.c:"1px solid "+T.border,background:p===x.k?x.c+"18":"transparent",color:p===x.k?x.c:T.muted,fontSize:10,fontWeight:600,cursor:"pointer"}}>{x.l}</button>})}
     </div>
     <div style={{display:"flex",gap:6}}>
       <button onClick={onClose} style={{flex:1,padding:9,borderRadius:8,border:"1px solid "+T.border,background:"transparent",color:T.muted,fontSize:11,fontWeight:600,cursor:"pointer"}}>Avbryt</button>
-      <button onClick={function(){if(name.trim())onSave({name:name.trim(),time:time,priority:prio})}} style={{flex:2,padding:9,borderRadius:8,border:"none",background:T.accent2,color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",opacity:name?"1":"0.4"}}>Spara</button>
+      <button onClick={function(){if(n.trim())onSave(n.trim(),p)}} style={{flex:2,padding:9,borderRadius:8,border:"none",background:T.accent2,color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",opacity:n?"1":"0.4"}}>Spara</button>
     </div>
   </div>);
 }
 
-
-const EC={food:{l:"Mat",c:"#ff6b6b"},transport:{l:"Transport",c:"#fdcb6e"},subs:{l:"Abonnemang",c:"#fd79a8"},fun:{l:"Nöje",c:"#00b894"},other:{l:"Övrigt",c:"#636e72"}};
-const DEFAULT_FIXED=[{id:"f1",name:"Bil",amount:8500},{id:"f2",name:"Gym + MMA",amount:1000},{id:"f3",name:"Spotify",amount:100},{id:"f4",name:"Lån",amount:3500}];
-const DEFAULT_ECO={entries:{},income:{},budget:{monthly:4000,resetDay:25,target:42000,allocations:[{name:"Fasta",amount:13500,auto:true},{name:"Rörlig",amount:4000,auto:true},{name:"Buffert",amount:4500,goalId:"g1"},{name:"Krypto Cold Wallet",amount:15000,goalId:"g2"},{name:"Verksamhetskassa USDT",amount:5000,goalId:"g3"}]},fixedExpenses:DEFAULT_FIXED,savings:{goals:[{id:"g1",name:"Buffert",target:20000,saved:0,nextGoal:"g4"},{id:"g2",name:"Krypto Cold Wallet",target:0,saved:0},{id:"g3",name:"Verksamhetskassa USDT",target:0,saved:0},{id:"g4",name:"Semester / Spenderingskassa",target:0,saved:0},{id:"g5",name:"Överskott USDT",target:0,saved:0}]},investments:[{id:"inv1",name:"TS lager",amount:26000,expectedValue:52000,date:"2026-03-01",status:"active"}],liquidity:80000,yearGoal:{target:150000,year:2026}};
+var DEFAULT_ECO={
+  entries:{},
+  income:{},
+  budget:{monthly:4000,resetDay:25,target:42000,
+    allocations:[{name:"Fasta",amount:13500,auto:true},{name:"Rörlig",amount:4000,auto:true},{name:"Buffert",amount:4500,goalId:"g1"},{name:"Krypto Cold Wallet",amount:15000,goalId:"g2"},{name:"Verksamhetskassa USDT",amount:5000,goalId:"g3"}]},
+  fixedExpenses:[{id:"f1",name:"Bil",amount:8500},{id:"f2",name:"Lån",amount:3500},{id:"f3",name:"Gym + MMA",amount:1000},{id:"f4",name:"Spotify",amount:100}],
+  savings:{goals:[
+    {id:"g1",name:"Buffert",target:20000,saved:0,nextGoal:"g4"},
+    {id:"g2",name:"Krypto Cold Wallet",target:0,saved:0},
+    {id:"g3",name:"Verksamhetskassa USDT",target:0,saved:0},
+    {id:"g4",name:"Semester / Spenderingskassa",target:0,saved:0},
+    {id:"g5",name:"Överskott USDT",target:0,saved:0}
+  ]},
+  investments:[{id:"inv1",name:"TS lager",amount:26000,expectedValue:52000,date:"2026-03-01",status:"active"}],
+  liquidity:80000,
+  yearGoal:{target:150000,year:2026}
+};
 
 function TabEconomy({ecoData,saveEco}){
-  var eco=ecoData||DEFAULT_ECO;
+  var eco=(ecoData&&ecoData.entries)?ecoData:{...DEFAULT_ECO,...(ecoData||{})};
+  var entries=eco.entries||{};
+  var incomeData=eco.income||{};
+  var budget=eco.budget||DEFAULT_ECO.budget;
+  var fixedExp=eco.fixedExpenses||DEFAULT_ECO.fixedExpenses;
+  var savingsData=eco.savings||DEFAULT_ECO.savings;
+  var goals=(savingsData&&savingsData.goals)||DEFAULT_ECO.savings.goals;
+  var investments=eco.investments||DEFAULT_ECO.investments;
+  var baseLiq=eco.liquidity!=null?eco.liquidity:80000;
+  var yearGoal=eco.yearGoal||DEFAULT_ECO.yearGoal;
+
   const[sub,setSub]=useState("daily");
-  const[month,setMonth]=useState(function(){var d=new Date();return{y:d.getFullYear(),m:d.getMonth()}});
   const[addMode,setAddMode]=useState(null);
-  const[editEntry,setEditEntry]=useState(null);
-  const[editFixed,setEditFixed]=useState(false);
-  var en=eco.entries||{},inc=eco.income||{},fx=eco.fixedExpenses||DEFAULT_FIXED;
-  var cap=(eco.budget&&eco.budget.monthly)||4000,resetDay=(eco.budget&&eco.budget.resetDay)||25;
-  var savings=eco.savings||{goals:[]};
-  var investments=eco.investments||[];
-  var baseLiq=eco.liquidity||80000;
+  const[month,setMonth]=useState(function(){var d=new Date();return{y:d.getFullYear(),m:d.getMonth()}});
+  const[editFixedOpen,setEditFixedOpen]=useState(false);
+  const[txModal,setTxModal]=useState(null);
 
-  // Budget period: 25th to 25th
-  function getBudgetPeriod(){var now=new Date(),d=now.getDate(),m=now.getMonth(),y=now.getFullYear();if(d>=resetDay)return{from:y+"-"+String(m+1).padStart(2,"0")+"-"+String(resetDay).padStart(2,"0"),to:m===11?(y+1)+"-01-"+String(resetDay).padStart(2,"0"):y+"-"+String(m+2).padStart(2,"0")+"-"+String(resetDay).padStart(2,"0")};var pm=m===0?11:m-1,py=m===0?y-1:y;return{from:py+"-"+String(pm+1).padStart(2,"0")+"-"+String(resetDay).padStart(2,"0"),to:y+"-"+String(m+1).padStart(2,"0")+"-"+String(resetDay).padStart(2,"0")}}
-  var bp=getBudgetPeriod();
-  function inBP(k){return k>=bp.from&&k<bp.to}
-  function inM(k){var p=k.split("-").map(Number);return p[0]===month.y&&p[1]-1===month.m}
+  function save(patch){saveEco({...eco,...patch})}
 
-  // Budget period expenses (for "kvar att spendera")
-  var bpExp=0;for(var k in en)if(inBP(k))en[k].forEach(function(e){bpExp+=e.amount});
+  // Totals
+  var fixedTotal=fixedExp.reduce(function(s,f){return s+f.amount},0);
+  var allIncome=0,allExpense=0;
+  for(var k in incomeData){(incomeData[k]||[]).forEach(function(i){allIncome+=i.amount})}
+  for(var k in entries){(entries[k]||[]).forEach(function(e){allExpense+=e.amount})}
+  var liquidity=baseLiq+allIncome-allExpense;
 
-  // Month totals (for overview)
-  var mExp=0,mIncFixed=0,mIncVar=0;
-  for(var k in en)if(inM(k))en[k].forEach(function(e){mExp+=e.amount});
-  for(var k in inc)if(inM(k))inc[k].forEach(function(e){if(e.type==="fast")mIncFixed+=e.amount;else mIncVar+=e.amount});
-  var mInc=mIncFixed+mIncVar;
-  var totalFx=fx.reduce(function(s,f){return s+f.amount},0);
+  // Month totals
+  function monthIncome(){var t=0;for(var k in incomeData){var p=k.split("-").map(Number);if(p[0]===month.y&&p[1]-1===month.m)(incomeData[k]||[]).forEach(function(i){t+=i.amount})}return t}
+  function monthExpense(){var t=0;for(var k in entries){var p=k.split("-").map(Number);if(p[0]===month.y&&p[1]-1===month.m)(entries[k]||[]).forEach(function(e){t+=e.amount})}return t}
 
-  // Liquidity: base + all income - all expenses
-  var allInc=0,allExp=0;
-  for(var k in inc)inc[k].forEach(function(e){allInc+=e.amount});
-  for(var k in en)en[k].forEach(function(e){allExp+=e.amount});
-  var liquidity=baseLiq+allInc-allExp;
+  // Budget period (25th to 25th)
+  var rorligSpent=0;
+  (function(){var now=new Date(),rd=budget.resetDay||25;
+    var start;
+    if(now.getDate()>=rd)start=new Date(now.getFullYear(),now.getMonth(),rd);
+    else start=new Date(now.getFullYear(),now.getMonth()-1,rd);
+    var sd=dk(start),ed=dk(now);
+    for(var k in entries){if(k>=sd&&k<=ed)(entries[k]||[]).forEach(function(e){rorligSpent+=e.amount})}
+  })();
+  var rorligLeft=(budget.monthly||4000)-rorligSpent;
 
-  function sv(n){saveEco(n)}
-  function addExp(amt,note){var d=dk(new Date()),ne={...en};if(!ne[d])ne[d]=[];ne[d]=[{id:uid(),time:new Date().toTimeString().slice(0,5),amount:amt,note:note},...ne[d]];sv({...eco,entries:ne});setAddMode(null)}
-  function addInc(amt,note,type){var d=dk(new Date()),ni={...inc};if(!ni[d])ni[d]=[];ni[d]=[{id:uid(),time:new Date().toTimeString().slice(0,5),amount:amt,note:note,type:type},...ni[d]];sv({...eco,income:ni});setAddMode(null)}
-  function rmEntry(et,date,id){var obj={...(et==="exp"?en:inc)};obj[date]=obj[date].filter(function(x){return x.id!==id});if(!obj[date].length)delete obj[date];sv({...eco,[et==="exp"?"entries":"income"]:obj});setEditEntry(null)}
-  function addSave(gid,amt){sv({...eco,savings:{...savings,goals:savings.goals.map(function(g){return g.id===gid?{...g,saved:g.saved+amt}:g})}})}
-  function addGoal(n,t){sv({...eco,savings:{...savings,goals:[...savings.goals,{id:uid(),name:n,target:t,saved:0}]}})}
-  function rmGoal(id){sv({...eco,savings:{...savings,goals:savings.goals.filter(function(g){return g.id!==id})}})}
-  function addInvest(inv){sv({...eco,investments:[...investments,{id:uid(),date:dk(new Date()),status:"active",...inv}]})}
-  function rmInvest(id){sv({...eco,investments:investments.filter(function(i){return i.id!==id})})}
-  function sellInvest(id,actual){sv({...eco,investments:investments.map(function(i){return i.id===id?{...i,status:"sold",actualReturn:actual}:i})})}
-  function renameGoal(id,name){sv({...eco,savings:{...savings,goals:savings.goals.map(function(g){return g.id===id?{...g,name:name}:g})}})}  function updFixed(list){sv({...eco,fixedExpenses:list})}
-  function updBudget(v){sv({...eco,budget:{monthly:v}})}
+  // Today totals
+  var todayStr=dk(new Date());
+  var todayIn=((incomeData[todayStr]||[]).reduce(function(s,i){return s+i.amount},0));
+  var todayOut=((entries[todayStr]||[]).reduce(function(s,e){return s+e.amount},0));
+  var todayNet=todayIn-todayOut;
 
-  var MN=function(){return <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:14}}>
-    <button onClick={function(){setMonth(function(p){return p.m===0?{y:p.y-1,m:11}:{y:p.y,m:p.m-1}})}} style={{background:T.card,border:"1px solid "+T.border,borderRadius:8,padding:"6px 10px",cursor:"pointer",color:T.text}}><Ic n="chevL" s={16} c={T.text}/></button>
-    <div style={{fontSize:15,fontWeight:700}}>{MONTHS_FULL[month.m]} {month.y}</div>
-    <button onClick={function(){setMonth(function(p){return p.m===11?{y:p.y+1,m:0}:{y:p.y,m:p.m+1}})}} style={{background:T.card,border:"1px solid "+T.border,borderRadius:8,padding:"6px 10px",cursor:"pointer",color:T.text}}><Ic n="chevR" s={16} c={T.text}/></button>
-  </div>};
+  // Add income
+  function addInc(amount,note,type){
+    var d=todayStr,ni={...incomeData};if(!ni[d])ni[d]=[];
+    ni[d]=[{id:uid(),time:new Date().toTimeString().slice(0,5),amount:Number(amount),note:note,type:type}].concat(ni[d]);
+    save({income:ni});setAddMode(null);
+  }
+  // Add expense
+  function addExp(amount,note){
+    var d=todayStr,ne={...entries};if(!ne[d])ne[d]=[];
+    ne[d]=[{id:uid(),time:new Date().toTimeString().slice(0,5),amount:Number(amount),note:note}].concat(ne[d]);
+    save({entries:ne});setAddMode(null);
+  }
+  // Delete transaction
+  function delTx(date,id,isIncome){
+    if(isIncome){var ni={...incomeData};ni[date]=(ni[date]||[]).filter(function(x){return x.id!==id});if(!ni[date].length)delete ni[date];save({income:ni})}
+    else{var ne={...entries};ne[date]=(ne[date]||[]).filter(function(x){return x.id!==id});if(!ne[date].length)delete ne[date];save({entries:ne})}
+    setTxModal(null);
+  }
+
+  // Savings total
+  var totalSaved=goals.reduce(function(s,g){return s+(g.saved||0)},0);
 
   return(<div style={{padding:"14px 18px 100px",animation:"fi .2s ease-out"}}>
     <div style={{fontSize:20,fontWeight:800,marginBottom:14}}>Ekonomi</div>
     <div style={{display:"flex",gap:3,marginBottom:14}}>
-      {[{k:"daily",l:"Daglig"},{k:"overview",l:"Översikt"},{k:"savings",l:"Sparmål"}].map(function(s){return <button key={s.k} onClick={function(){setSub(s.k)}} style={{flex:1,padding:"7px 0",borderRadius:8,border:sub===s.k?"1px solid "+T.accent:"1px solid "+T.border,background:sub===s.k?"rgba(108,92,231,0.1)":T.card,color:sub===s.k?T.accent:T.muted,fontSize:11,fontWeight:600,cursor:"pointer"}}>{s.l}</button>})}
+      {[{k:"daily",l:"Daglig"},{k:"overview",l:"Översikt"},{k:"savings",l:"Sparmål"}].map(function(s){return(
+        <button key={s.k} onClick={function(){setSub(s.k)}} style={{flex:1,padding:"7px 0",borderRadius:8,border:sub===s.k?"1px solid "+T.accent:"1px solid "+T.border,background:sub===s.k?"rgba(108,92,231,0.1)":T.card,color:sub===s.k?T.accent:T.muted,fontSize:10,fontWeight:600,cursor:"pointer"}}>{s.l}</button>
+      )})}
     </div>
 
-    {/* DAGLIG */}
+    {/* ============ DAGLIG ============ */}
     {sub==="daily"&&<div>
       {/* Likvida medel */}
-      <div style={{background:T.card,border:"1px solid "+T.border,borderRadius:12,padding:"12px 14px",marginBottom:10,display:"flex",justifyContent:"space-between",alignItems:"center"}} onClick={function(){var v=prompt("Uppdatera likvida medel (kr):",liquidity);if(v&&!isNaN(v))sv({...eco,liquidity:Number(v)-allInc+allExp})}}>
-        <div><div style={{fontSize:9,color:T.muted}}>Likvida medel</div><div style={{fontSize:22,fontWeight:900,fontFamily:"'JetBrains Mono'",color:T.accent2}}>{liquidity.toLocaleString("sv")} kr</div></div>
-        <Ic n="edit" s={14} c={T.subtle}/>
+      <div onClick={function(){var v=prompt("Uppdatera likvida medel (basvärde):",baseLiq);if(v!==null&&!isNaN(v))save({liquidity:Number(v)})}} style={{background:"linear-gradient(135deg,"+T.accent+"22,"+T.accent2+"22)",border:"1px solid "+T.accent+"33",borderRadius:12,padding:"14px 16px",marginBottom:10,cursor:"pointer",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div>
+          <div style={{fontSize:9,fontWeight:700,color:T.muted,textTransform:"uppercase",letterSpacing:1}}>Likvida medel</div>
+          <div style={{fontSize:24,fontWeight:900,color:T.text,fontFamily:"'JetBrains Mono'",lineHeight:1.2}}>{liquidity.toLocaleString("sv")} kr</div>
+        </div>
+        <Ic n="edit" s={14} c={T.muted}/>
       </div>
 
       {/* Kvar att spendera */}
-      <div style={{background:"linear-gradient(135deg,rgba(108,92,231,0.12),rgba(0,206,201,0.08))",border:"1px solid rgba(108,92,231,0.2)",borderRadius:14,padding:"14px",textAlign:"center",marginBottom:12}}>
-        <div style={{fontSize:10,color:T.muted}}>Kvar att spendera</div>
-        <div style={{fontSize:26,fontWeight:900,fontFamily:"'JetBrains Mono'",color:cap-bpExp>=0?T.success:T.danger}}>{(cap-bpExp).toLocaleString("sv")} kr</div>
-        <div style={{fontSize:9,color:T.subtle}}>av {cap.toLocaleString("sv")} · resetas {resetDay}:e varje mån</div>
-        <div style={{height:4,background:T.surface,borderRadius:2,marginTop:6,overflow:"hidden"}}>
-          <div style={{height:"100%",width:Math.min(100,bpExp/Math.max(cap,1)*100)+"%",background:cap-bpExp>=0?T.accent:T.danger,borderRadius:2}}/>
+      <div style={{background:T.card,border:"1px solid "+(rorligLeft>=0?T.success+"33":T.danger+"33"),borderRadius:12,padding:"12px 16px",marginBottom:10}}>
+        <div style={{fontSize:9,fontWeight:700,color:T.muted,marginBottom:2}}>Kvar att spendera</div>
+        <div style={{fontSize:22,fontWeight:900,color:rorligLeft>=0?T.success:T.danger,fontFamily:"'JetBrains Mono'",lineHeight:1.2}}>{rorligLeft.toLocaleString("sv")} kr</div>
+        <div style={{height:6,background:T.surface,borderRadius:3,marginTop:6,overflow:"hidden"}}>
+          <div style={{height:"100%",width:Math.min(100,rorligSpent/(budget.monthly||4000)*100)+"%",background:rorligLeft>=0?T.success:T.danger,borderRadius:3,transition:"width .3s"}}/>
         </div>
+        <div style={{fontSize:8,color:T.subtle,marginTop:4}}>av {(budget.monthly||4000).toLocaleString("sv")} kr · resetas {budget.resetDay||25}:e varje mån</div>
       </div>
 
       {/* Dagssummering */}
-      {(function(){var today=dk(new Date()),dI=0,dE=0;
-        if(inc[today])inc[today].forEach(function(e){dI+=e.amount});
-        if(en[today])en[today].forEach(function(e){dE+=e.amount});
-        if(dI===0&&dE===0)return null;
-        return <div style={{display:"flex",gap:6,marginBottom:12}}>
-          {[{l:"In idag",v:"+"+dI.toLocaleString("sv"),c:T.success},{l:"Ut idag",v:"−"+dE.toLocaleString("sv"),c:T.danger},{l:"Netto",v:(dI-dE>=0?"+":"")+(dI-dE).toLocaleString("sv"),c:dI-dE>=0?T.accent2:T.danger}].map(function(c,i){return <div key={i} style={{flex:1,background:T.card,border:"1px solid "+T.border,borderRadius:8,padding:"8px 4px",textAlign:"center"}}>
+      {(todayIn>0||todayOut>0)&&<div style={{display:"flex",gap:6,marginBottom:10}}>
+        {[{l:"In idag",v:"+"+todayIn.toLocaleString("sv"),c:T.success},{l:"Ut idag",v:"-"+todayOut.toLocaleString("sv"),c:T.danger},{l:"Netto",v:(todayNet>=0?"+":"")+todayNet.toLocaleString("sv"),c:todayNet>=0?T.accent2:T.danger}].map(function(c,i){return(
+          <div key={i} style={{flex:1,background:T.card,border:"1px solid "+T.border,borderRadius:8,padding:"8px 6px",textAlign:"center"}}>
             <div style={{fontSize:8,color:T.muted}}>{c.l}</div>
-            <div style={{fontSize:13,fontWeight:800,fontFamily:"'JetBrains Mono'",color:c.c}}>{c.v}</div>
-          </div>})}
-        </div>
-      })()}
+            <div style={{fontSize:13,fontWeight:800,color:c.c,fontFamily:"'JetBrains Mono'"}}>{c.v}</div>
+          </div>
+        )})}</div>}
 
-      <div style={{display:"flex",gap:4,marginBottom:12}}>
+      {/* Knappar */}
+      <div style={{display:"flex",gap:6,marginBottom:12}}>
         <button onClick={function(){setAddMode("inc")}} style={{flex:1,padding:12,borderRadius:10,border:"1px solid "+T.success+"44",background:T.success+"08",color:T.success,fontSize:13,fontWeight:700,cursor:"pointer"}}>+ Inkomst</button>
         <button onClick={function(){setAddMode("exp")}} style={{flex:1,padding:12,borderRadius:10,border:"1px solid "+T.danger+"44",background:T.danger+"08",color:T.danger,fontSize:13,fontWeight:700,cursor:"pointer"}}>− Utgift</button>
       </div>
 
-      {addMode==="inc"&&<div style={{background:T.card,border:"1px solid "+T.success+"33",borderRadius:12,padding:14,marginBottom:10,animation:"fi .15s ease-out"}}>
-        <IncForm onSave={addInc} onClose={function(){setAddMode(null)}}/>
-      </div>}
-      {addMode==="exp"&&<div style={{background:T.card,border:"1px solid "+T.danger+"33",borderRadius:12,padding:14,marginBottom:10,animation:"fi .15s ease-out"}}>
-        <ExpForm onSave={addExp} onClose={function(){setAddMode(null)}}/>
-      </div>}
+      {/* IncForm */}
+      {addMode==="inc"&&<EcoForm type="inc" onSave={addInc} onClose={function(){setAddMode(null)}}/>}
+      {addMode==="exp"&&<EcoForm type="exp" onSave={function(a,n){addExp(a,n)} } onClose={function(){setAddMode(null)}}/>}
 
-      {(function(){var today=dk(new Date()),all={};
-        for(var k in en){if(inM(k)){if(!all[k])all[k]=[];en[k].forEach(function(e){all[k].push({...e,date:k,et:"exp"})})}}
-        for(var k in inc){if(inM(k)){if(!all[k])all[k]=[];inc[k].forEach(function(e){all[k].push({...e,date:k,et:"inc"})})}}
-        var days=Object.keys(all).sort().reverse();
-        if(!days.length)return <div style={{textAlign:"center",padding:30,color:T.subtle,fontSize:12}}>Inga transaktioner</div>;
-        return days.map(function(d){var items=all[d],dI=0,dE=0;items.forEach(function(e){if(e.et==="inc")dI+=e.amount;else dE+=e.amount});
+      {/* Transaktioner */}
+      <div style={{marginBottom:8}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+          <button onClick={function(){setMonth(function(p){return p.m===0?{y:p.y-1,m:11}:{y:p.y,m:p.m-1}})}} style={{background:T.card,border:"1px solid "+T.border,borderRadius:6,padding:"4px 8px",cursor:"pointer"}}><Ic n="chevL" s={14} c={T.text}/></button>
+          <div style={{fontSize:12,fontWeight:700}}>{MONTHS_FULL[month.m]} {month.y}</div>
+          <button onClick={function(){setMonth(function(p){return p.m===11?{y:p.y+1,m:0}:{y:p.y,m:p.m+1}})}} style={{background:T.card,border:"1px solid "+T.border,borderRadius:6,padding:"4px 8px",cursor:"pointer"}}><Ic n="chevR" s={14} c={T.text}/></button>
+        </div>
+      </div>
+
+      {(function(){
+        var allDays={};
+        for(var k in entries){var p=k.split("-").map(Number);if(p[0]===month.y&&p[1]-1===month.m){if(!allDays[k])allDays[k]=[];(entries[k]||[]).forEach(function(e){allDays[k].push({...e,isIncome:false})})}}
+        for(var k in incomeData){var p=k.split("-").map(Number);if(p[0]===month.y&&p[1]-1===month.m){if(!allDays[k])allDays[k]=[];(incomeData[k]||[]).forEach(function(i){allDays[k].push({...i,isIncome:true})})}}
+        var days=Object.keys(allDays).sort().reverse();
+        if(!days.length)return <div style={{textAlign:"center",padding:30,color:T.subtle}}>Inga transaktioner</div>;
+        return days.map(function(d){
+          var isToday=d===todayStr;
           return <div key={d} style={{marginBottom:12}}>
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-              <span style={{fontSize:11,fontWeight:700,color:d===today?T.accent:T.text}}>{d===today?"Idag":new Date(d+"T12:00").toLocaleDateString("sv",{weekday:"short",day:"numeric",month:"short"})}</span>
-              <span style={{fontSize:10,fontFamily:"'JetBrains Mono'"}}>{dI>0&&<span style={{color:T.success}}>+{dI.toLocaleString("sv")} </span>}{dE>0&&<span style={{color:T.danger}}>−{dE.toLocaleString("sv")}</span>}</span>
-            </div>
-            {items.sort(function(a,b){return(b.time||"").localeCompare(a.time||"")}).map(function(e){
-              var isI=e.et==="inc";
-              return <div key={e.id} onClick={function(){setEditEntry(e)}} style={{display:"flex",alignItems:"center",gap:8,padding:"7px 10px",background:isI?T.success+"06":T.card,border:"1px solid "+(isI?T.success+"15":T.border),borderRadius:8,marginBottom:2,cursor:"pointer"}}>
-                <div style={{width:4,height:22,borderRadius:2,background:isI?(e.type==="fast"?T.success:T.accent2):T.danger,flexShrink:0}}/>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:12,fontWeight:600}}>{e.note||(isI?(e.type==="fast"?"Lön":"Inkomst"):"Utgift")}</div>
-                  <div style={{fontSize:9,color:T.subtle}}>{isI?(e.type==="fast"?"Fast":"Rörlig"):"Rörlig"}{e.time?" · "+e.time:""}</div>
+            <div style={{fontSize:11,fontWeight:700,color:isToday?T.accent:T.text,marginBottom:4}}>{isToday?"Idag":new Date(d+"T12:00").toLocaleDateString("sv",{weekday:"short",day:"numeric",month:"short"})}</div>
+            {allDays[d].sort(function(a,b){return(b.time||"").localeCompare(a.time||"")}).map(function(tx){
+              var isInc=tx.isIncome;
+              return <div key={tx.id} onClick={function(){setTxModal({...tx,date:d})}} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",background:T.card,border:"1px solid "+T.border,borderRadius:8,marginBottom:2,cursor:"pointer"}}>
+                <div style={{width:3,height:28,borderRadius:2,background:isInc?T.success:T.danger,flexShrink:0}}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:12,fontWeight:600}}>{tx.note||"Transaktion"}</div>
+                  <div style={{fontSize:9,color:T.subtle}}>{tx.time||""}{isInc&&tx.type?" · "+(tx.type==="fast"?"Fast":"Rörlig"):""}</div>
                 </div>
-                <div style={{fontSize:13,fontWeight:700,fontFamily:"'JetBrains Mono'",color:isI?T.success:T.text}}>{isI?"+":"−"}{e.amount.toLocaleString("sv")}</div>
-              </div>})}
-          </div>})
+                <div style={{fontSize:13,fontWeight:700,fontFamily:"'JetBrains Mono'",color:isInc?T.success:T.danger}}>{isInc?"+":"−"}{tx.amount.toLocaleString("sv")}</div>
+              </div>
+            })}
+          </div>
+        })
       })()}
-      <MN/>
-      {editEntry&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",backdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}} onClick={function(){setEditEntry(null)}}>
+
+      {/* Tx modal */}
+      {txModal&&<div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",backdropFilter:"blur(6px)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:200,padding:20}} onClick={function(){setTxModal(null)}}>
         <div style={{background:T.card,border:"1px solid "+T.border,borderRadius:14,padding:20,width:"100%",maxWidth:340,animation:"fi .1s ease-out"}} onClick={function(e){e.stopPropagation()}}>
-          <div style={{fontSize:22,fontWeight:800,fontFamily:"'JetBrains Mono'",color:editEntry.et==="inc"?T.success:T.text}}>{editEntry.amount.toLocaleString("sv")} kr</div>
-          <div style={{fontSize:11,color:T.muted,marginBottom:14}}>{editEntry.note||"—"} · {editEntry.time||""}</div>
+          <div style={{fontSize:14,fontWeight:700,marginBottom:8}}>{txModal.note||"Transaktion"}</div>
+          <div style={{fontSize:22,fontWeight:800,fontFamily:"'JetBrains Mono'",color:txModal.isIncome?T.success:T.danger,marginBottom:12}}>{txModal.isIncome?"+":"−"}{txModal.amount.toLocaleString("sv")} kr</div>
           <div style={{display:"flex",gap:6}}>
-            <button onClick={function(){rmEntry(editEntry.et,editEntry.date,editEntry.id)}} style={{flex:1,padding:10,borderRadius:8,border:"1px solid "+T.danger,background:T.danger+"0d",color:T.danger,fontSize:12,fontWeight:600,cursor:"pointer"}}>Radera</button>
-            <button onClick={function(){setEditEntry(null)}} style={{flex:1,padding:10,borderRadius:8,border:"1px solid "+T.border,background:T.surface,color:T.muted,fontSize:12,fontWeight:600,cursor:"pointer"}}>Stäng</button>
+            <button onClick={function(){delTx(txModal.date,txModal.id,txModal.isIncome)}} style={{flex:1,padding:10,borderRadius:8,border:"1px solid "+T.danger,background:T.danger+"08",color:T.danger,fontSize:12,fontWeight:700,cursor:"pointer"}}>Radera</button>
+            <button onClick={function(){setTxModal(null)}} style={{flex:1,padding:10,borderRadius:8,border:"1px solid "+T.border,background:T.surface,color:T.muted,fontSize:12,fontWeight:600,cursor:"pointer"}}>Stäng</button>
           </div>
         </div>
       </div>}
     </div>}
 
-    {/* ÖVERSIKT */}
+    {/* ============ ÖVERSIKT ============ */}
     {sub==="overview"&&<div>
-      <MN/>
-      {/* Inkomst vs Mål */}
-      <div style={{background:T.card,border:"1px solid "+T.border,borderRadius:12,padding:14,marginBottom:12}}>
-        <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-          <span style={{fontSize:12,fontWeight:700}}>Inkomst denna månad</span>
-          <span style={{fontSize:16,fontWeight:800,fontFamily:"'JetBrains Mono'",color:mInc>=42000?T.success:T.accent2}}>{mInc.toLocaleString("sv")} kr</span>
+      {/* Inkomst vs mål */}
+      <div style={{marginBottom:14}}>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:3}}>
+          <span style={{fontWeight:700}}>Månadsinkomst vs mål</span>
+          <span style={{fontWeight:700,color:T.success,fontFamily:"'JetBrains Mono'"}}>{monthIncome().toLocaleString("sv")} / {(budget.target||42000).toLocaleString("sv")} kr</span>
         </div>
-        <div style={{height:6,background:T.surface,borderRadius:3,overflow:"hidden",marginBottom:4}}>
-          <div style={{height:"100%",width:Math.min(100,mInc/42000*100)+"%",background:mInc>=42000?"linear-gradient(90deg,"+T.success+","+T.accent2+")":T.accent,borderRadius:3}}/>
+        <div style={{height:8,background:T.surface,borderRadius:4,overflow:"hidden"}}>
+          <div style={{height:"100%",width:Math.min(100,monthIncome()/(budget.target||42000)*100)+"%",background:monthIncome()>=(budget.target||42000)?T.success:"linear-gradient(90deg,"+T.accent+","+T.accent2+")",borderRadius:4}}/>
         </div>
-        <div style={{fontSize:9,color:T.subtle}}>{Math.round(mInc/42000*100)}% av mål 42 000 kr{mInc>42000?" · Överskott: "+(mInc-42000).toLocaleString("sv")+" kr":""}</div>
+        {monthIncome()>(budget.target||42000)&&<div style={{fontSize:10,fontWeight:700,color:T.success,marginTop:4,padding:"4px 8px",background:T.success+"10",borderRadius:6,display:"inline-block"}}>Överskott: +{(monthIncome()-(budget.target||42000)).toLocaleString("sv")} kr → Överskottskonto</div>}
       </div>
 
       {/* Fördelningsplan */}
-      <div style={{background:T.card,border:"1px solid "+T.border,borderRadius:12,padding:14,marginBottom:12}}>
-        <div style={{fontSize:12,fontWeight:700,marginBottom:10}}>Månadsfördelning</div>
-        {[{n:"Fasta",a:13500,c:T.warning},{n:"Rörlig",a:cap,c:T.danger},{n:"Buffert → Semester",a:4500,c:T.accent},{n:"Krypto Cold Wallet",a:15000,c:T.accent2},{n:"Verksamhetskassa USDT",a:5000,c:"#f39c12"}].map(function(r){return <div key={r.n} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 0",borderBottom:"1px solid "+T.border+"66"}}>
-          <div style={{display:"flex",alignItems:"center",gap:6}}>
-            <div style={{width:4,height:16,borderRadius:2,background:r.c}}/>
-            <span style={{fontSize:12,fontWeight:600}}>{r.n}</span>
+      <div style={{marginBottom:14}}>
+        <div style={{fontSize:12,fontWeight:700,marginBottom:6}}>Fördelningsplan</div>
+        {(budget.allocations||DEFAULT_ECO.budget.allocations).map(function(a,i){
+          var colors=[T.warning,T.danger,T.accent,"#00cec9","#f39c12"];
+          var c=colors[i]||T.muted;
+          var pct=Math.round(a.amount/(budget.target||42000)*100);
+          return <div key={i} style={{marginBottom:6}}>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:2}}>
+              <span style={{color:T.text,fontWeight:600}}>{a.name}</span>
+              <span style={{color:c,fontWeight:700,fontFamily:"'JetBrains Mono'"}}>{a.amount.toLocaleString("sv")} kr <span style={{fontSize:8,color:T.subtle}}>({pct}%)</span></span>
+            </div>
+            <div style={{height:5,background:T.surface,borderRadius:3,overflow:"hidden"}}>
+              <div style={{height:"100%",width:pct+"%",background:c,borderRadius:3}}/>
+            </div>
           </div>
-          <span style={{fontSize:13,fontWeight:700,fontFamily:"'JetBrains Mono'",color:r.c}}>{r.a.toLocaleString("sv")}</span>
-        </div>})}
-        <div style={{display:"flex",justifyContent:"space-between",paddingTop:8,marginTop:4}}>
-          <span style={{fontSize:12,fontWeight:800}}>Totalt</span>
-          <span style={{fontSize:14,fontWeight:900,fontFamily:"'JetBrains Mono'",color:T.text}}>42 000</span>
+        })}
+        <div style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderTop:"1px solid "+T.border,marginTop:4,fontSize:11,fontWeight:800}}>
+          <span>Totalt</span>
+          <span style={{fontFamily:"'JetBrains Mono'",color:T.accent}}>{(budget.allocations||DEFAULT_ECO.budget.allocations).reduce(function(s,a){return s+a.amount},0).toLocaleString("sv")} kr</span>
         </div>
-        {mInc>42000&&<div style={{marginTop:8,padding:"8px 10px",background:T.success+"10",border:"1px solid "+T.success+"33",borderRadius:8}}>
-          <div style={{fontSize:11,fontWeight:700,color:T.success}}>Överskott: {(mInc-42000).toLocaleString("sv")} kr → Överskottskonto</div>
-        </div>}
-      </div>
-
-      {/* Netto */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:12}}>
-        {[{l:"Netto",v:mInc-mExp-totalFx,c:mInc-mExp-totalFx>=0?T.success:T.danger},{l:"Utgifter (rörlig)",v:mExp,c:T.danger}].map(function(c,i){return <div key={i} style={{background:T.card,border:"1px solid "+T.border,borderRadius:10,padding:"10px 8px",textAlign:"center"}}>
-          <div style={{fontSize:9,color:T.muted}}>{c.l}</div>
-          <div style={{fontSize:16,fontWeight:800,fontFamily:"'JetBrains Mono'",color:c.c}}>{c.v.toLocaleString("sv")}</div>
-        </div>})}
       </div>
 
       {/* Årsmål */}
-      {(function(){var yg=eco.yearGoal||{target:150000,year:2026};var totalSaved=savings.goals.reduce(function(s,g){return s+g.saved},0);var now=new Date();var monthsPassed=now.getMonth()+1;var monthsLeft=Math.max(1,12-monthsPassed);var pct=yg.target>0?Math.min(100,Math.round(totalSaved/yg.target*100)):0;var perMonth=monthsLeft>0?Math.round((yg.target-totalSaved)/monthsLeft):0;
-        return <div style={{background:T.card,border:"1px solid "+T.border,borderRadius:12,padding:14,marginBottom:12}} onClick={function(){var v=prompt("Årsmål "+yg.year+" (kr):",yg.target);if(v&&!isNaN(v))sv({...eco,yearGoal:{...yg,target:Number(v)}})}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-            <div style={{fontSize:12,fontWeight:700}}>Mål {yg.year}</div>
-            <div style={{fontSize:9,color:T.subtle,cursor:"pointer"}}>tryck för att ändra</div>
-          </div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",marginBottom:6}}>
-            <div style={{fontSize:20,fontWeight:900,fontFamily:"'JetBrains Mono'",color:T.accent2}}>{totalSaved.toLocaleString("sv")}</div>
-            <div style={{fontSize:12,color:T.muted}}>av {yg.target.toLocaleString("sv")} kr</div>
-          </div>
-          <div style={{height:8,background:T.surface,borderRadius:4,overflow:"hidden",marginBottom:6}}>
-            <div style={{height:"100%",width:pct+"%",background:"linear-gradient(90deg,"+T.accent+","+T.accent2+")",borderRadius:4}}/>
-          </div>
-          <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:T.subtle}}>
-            <span>{pct}% · {monthsPassed} mån gått</span>
-            <span>{perMonth>0?"Behöver "+perMonth.toLocaleString("sv")+"/mån":"Klart!"}</span>
-          </div>
+      <div onClick={function(){var v=prompt("Årsmål (kr):",yearGoal.target);if(v!==null&&!isNaN(v))save({yearGoal:{...yearGoal,target:Number(v)}})}} style={{background:T.card,border:"1px solid "+T.border,borderRadius:10,padding:12,marginBottom:14,cursor:"pointer"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+          <div style={{fontSize:11,fontWeight:700}}>Årsmål {yearGoal.year||2026}</div>
+          <div style={{fontSize:14,fontWeight:800,color:T.accent,fontFamily:"'JetBrains Mono'"}}>{(yearGoal.target||150000).toLocaleString("sv")} kr</div>
         </div>
-      })()}
+        <div style={{height:6,background:T.surface,borderRadius:3,overflow:"hidden"}}>
+          <div style={{height:"100%",width:Math.min(100,totalSaved/(yearGoal.target||150000)*100)+"%",background:"linear-gradient(90deg,"+T.accent+","+T.accent2+")",borderRadius:3}}/>
+        </div>
+        <div style={{fontSize:8,color:T.subtle,marginTop:3}}>{Math.round(totalSaved/(yearGoal.target||150000)*100)}% · Sparat: {totalSaved.toLocaleString("sv")} kr</div>
+      </div>
 
-      {/* Fasta */}
-      <div style={{background:T.card,border:"1px solid "+T.border,borderRadius:10,padding:14,marginBottom:12}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-          <span style={{fontSize:12,fontWeight:700}}>Fasta utgifter</span>
-          <button onClick={function(){setEditFixed(!editFixed)}} style={{background:"none",border:"none",cursor:"pointer"}}><Ic n={editFixed?"x":"edit"} s={14} c={T.muted}/></button>
+      {/* Summakort */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:14}}>
+        <div style={{background:T.card,border:"1px solid "+T.border,borderRadius:10,padding:"10px",textAlign:"center"}}>
+          <div style={{fontSize:8,color:T.muted}}>Netto denna mån</div>
+          <div style={{fontSize:16,fontWeight:800,fontFamily:"'JetBrains Mono'",color:(monthIncome()-monthExpense()-fixedTotal)>=0?T.success:T.danger}}>{(monthIncome()-monthExpense()-fixedTotal).toLocaleString("sv")}</div>
         </div>
-        {fx.map(function(f){return <div key={f.id} style={{display:"flex",justifyContent:"space-between",padding:"3px 0",fontSize:12}}>
-          <span>{f.name}</span><span style={{fontWeight:700,fontFamily:"'JetBrains Mono'",color:T.warning}}>{f.amount.toLocaleString("sv")}</span>
+        <div style={{background:T.card,border:"1px solid "+T.border,borderRadius:10,padding:"10px",textAlign:"center"}}>
+          <div style={{fontSize:8,color:T.muted}}>Utgifter (rörlig)</div>
+          <div style={{fontSize:16,fontWeight:800,fontFamily:"'JetBrains Mono'",color:T.danger}}>{monthExpense().toLocaleString("sv")}</div>
+        </div>
+      </div>
+
+      {/* Fasta utgifter */}
+      <div style={{marginBottom:14}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+          <div style={{fontSize:12,fontWeight:700}}>Fasta utgifter</div>
+          <div style={{display:"flex",alignItems:"center",gap:6}}>
+            <span style={{fontSize:11,fontWeight:700,color:T.danger,fontFamily:"'JetBrains Mono'"}}>{fixedTotal.toLocaleString("sv")} kr</span>
+            <button onClick={function(){setEditFixedOpen(!editFixedOpen)}} style={{background:"none",border:"none",cursor:"pointer",padding:2}}><Ic n="edit" s={12} c={T.muted}/></button>
+          </div>
+        </div>
+        {fixedExp.map(function(f){return <div key={f.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 10px",background:T.card,border:"1px solid "+T.border,borderRadius:6,marginBottom:2}}>
+          <span style={{fontSize:11,color:T.text}}>{f.name}</span>
+          {editFixedOpen?<div style={{display:"flex",alignItems:"center",gap:4}}>
+            <input defaultValue={f.amount} onBlur={function(e){var v=Number(e.target.value);if(!isNaN(v)&&v>=0){save({fixedExpenses:fixedExp.map(function(x){return x.id===f.id?{...x,amount:v}:x})})}} } type="number" style={{width:70,padding:"3px 6px",borderRadius:4,border:"1px solid "+T.border,background:T.surface,color:T.text,fontSize:11,fontFamily:"'JetBrains Mono'",textAlign:"right",outline:"none"}}/>
+            <button onClick={function(){save({fixedExpenses:fixedExp.filter(function(x){return x.id!==f.id})})}} style={{background:"none",border:"none",cursor:"pointer",padding:1}}><Ic n="trash" s={10} c={T.danger}/></button>
+          </div>:<span style={{fontSize:11,fontWeight:700,fontFamily:"'JetBrains Mono'",color:T.muted}}>{f.amount.toLocaleString("sv")} kr</span>}
         </div>})}
-        <div style={{borderTop:"1px solid "+T.border,marginTop:6,paddingTop:6,display:"flex",justifyContent:"space-between",fontSize:12}}>
-          <span style={{fontWeight:700}}>Totalt</span>
-          <span style={{fontWeight:800,fontFamily:"'JetBrains Mono'",color:T.warning}}>{totalFx.toLocaleString("sv")} kr</span>
-        </div>
-        {editFixed&&<div style={{marginTop:10}}>
-          {fx.map(function(f,i){return <div key={f.id} style={{display:"flex",gap:4,marginBottom:4}}>
-            <input defaultValue={f.name} onBlur={function(e){var nl=[...fx];nl[i]={...nl[i],name:e.target.value};updFixed(nl)}} style={{flex:2,padding:"6px 8px",borderRadius:6,border:"1px solid "+T.border,background:T.surface,color:T.text,fontSize:11,outline:"none"}}/>
-            <input defaultValue={f.amount} type="number" onBlur={function(e){var nl=[...fx];nl[i]={...nl[i],amount:Number(e.target.value)||0};updFixed(nl)}} style={{flex:1,padding:"6px 8px",borderRadius:6,border:"1px solid "+T.border,background:T.surface,color:T.text,fontSize:11,fontFamily:"'JetBrains Mono'",outline:"none"}}/>
-            <button onClick={function(){updFixed(fx.filter(function(_,j){return j!==i}))}} style={{padding:4,background:"none",border:"none",cursor:"pointer"}}><Ic n="trash" s={12} c={T.danger}/></button>
-          </div>})}
-          <button onClick={function(){updFixed([...fx,{id:uid(),name:"Ny",amount:0}])}} style={{width:"100%",padding:6,borderRadius:6,border:"1px dashed "+T.border,background:"transparent",color:T.muted,fontSize:10,cursor:"pointer",marginTop:4}}>+ Lägg till</button>
-          <button onClick={function(){var v=prompt("Rörlig budget/mån:",cap);if(v&&!isNaN(v))updBudget(Number(v))}} style={{width:"100%",padding:6,borderRadius:6,border:"1px solid "+T.accent,background:T.accent+"0a",color:T.accent,fontSize:10,fontWeight:600,cursor:"pointer",marginTop:4}}>Ändra rörlig budget ({cap} kr)</button>
+        {editFixedOpen&&<div style={{display:"flex",gap:4,marginTop:4}}>
+          <button onClick={function(){var n=prompt("Namn:");if(!n)return;var a=prompt("Belopp:");if(!a||isNaN(a))return;save({fixedExpenses:fixedExp.concat([{id:uid(),name:n,amount:Number(a)}])})}} style={{flex:1,padding:"6px",borderRadius:6,border:"1px dashed "+T.border,background:"transparent",color:T.muted,fontSize:10,fontWeight:600,cursor:"pointer"}}>+ Ny fast</button>
+          <button onClick={function(){var v=prompt("Rörlig budget (kr):",budget.monthly);if(v!==null&&!isNaN(v))save({budget:{...budget,monthly:Number(v)}})}} style={{flex:1,padding:"6px",borderRadius:6,border:"1px dashed "+T.accent,background:"transparent",color:T.accent,fontSize:10,fontWeight:600,cursor:"pointer"}}>Rörlig: {budget.monthly} kr</button>
         </div>}
       </div>
     </div>}
 
-    {/* SPARMÅL + INVESTERINGAR */}
+    {/* ============ SPARMÅL ============ */}
     {sub==="savings"&&<div>
       {/* Totalt sparat */}
-      <div style={{background:"linear-gradient(135deg,rgba(0,206,201,0.1),rgba(108,92,231,0.08))",border:"1px solid rgba(0,206,201,0.2)",borderRadius:14,padding:"14px",textAlign:"center",marginBottom:14}}>
-        <div style={{fontSize:10,color:T.muted}}>Totalt sparat</div>
-        <div style={{fontSize:28,fontWeight:900,fontFamily:"'JetBrains Mono'",color:T.accent2}}>{savings.goals.reduce(function(s,g){return s+g.saved},0).toLocaleString("sv")} kr</div>
+      <div style={{background:"linear-gradient(135deg,"+T.accent+"22,"+T.accent2+"22)",border:"1px solid "+T.accent+"33",borderRadius:12,padding:"14px 16px",marginBottom:14,textAlign:"center"}}>
+        <div style={{fontSize:9,fontWeight:700,color:T.muted,textTransform:"uppercase",letterSpacing:1}}>Totalt sparat</div>
+        <div style={{fontSize:28,fontWeight:900,color:T.text,fontFamily:"'JetBrains Mono'",lineHeight:1.2}}>{totalSaved.toLocaleString("sv")} kr</div>
       </div>
 
-      {/* Sparmål */}
-      {savings.goals.map(function(g){var hasTgt=g.target>0;var pct=hasTgt?Math.min(100,Math.round(g.saved/g.target*100)):0;
-        var alloc=((eco.budget&&eco.budget.allocations)||[]).find(function(a){return a.goalId===g.id});var perMonth=alloc?alloc.amount:0;
-        var mo=hasTgt&&perMonth>0&&g.saved<g.target?Math.ceil((g.target-g.saved)/perMonth):null;
-        var done=hasTgt&&g.saved>=g.target;
-        return <div key={g.id} style={{background:T.card,border:"1px solid "+(done?T.success+"33":T.border),borderRadius:12,padding:14,marginBottom:8}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-            <div style={{display:"flex",alignItems:"center",gap:6}} onClick={function(){var n=prompt("Nytt namn:",g.name);if(n&&n.trim())renameGoal(g.id,n.trim())}}>
-              {done&&<span style={{fontSize:10,color:T.success}}>✓</span>}
-              <span style={{fontSize:13,fontWeight:700,color:done?T.success:T.text,borderBottom:"1px dashed "+T.border,cursor:"pointer"}}>{g.name}</span>
+      {/* Goals */}
+      {goals.map(function(g){
+        var alloc=(budget.allocations||[]).find(function(a){return a.goalId===g.id});
+        var perMonth=alloc?alloc.amount:0;
+        var hasTgt=g.target>0;
+        var pct=hasTgt?Math.min(100,Math.round((g.saved||0)/g.target*100)):0;
+        var monthsLeft=hasTgt&&perMonth>0?Math.max(0,Math.ceil((g.target-(g.saved||0))/perMonth)):null;
+        var gc=[T.accent2,T.accent,T.pin,T.warning,"#636e72"];
+        var ci=goals.indexOf(g);
+        var cc=gc[ci]||T.muted;
+        return <div key={g.id} style={{background:T.card,border:"1px solid "+T.border,borderRadius:10,padding:"10px 12px",marginBottom:6}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+            <div style={{display:"flex",alignItems:"center",gap:6}}>
+              <div style={{width:4,height:20,borderRadius:2,background:cc}}/>
+              <span onClick={function(){var n=prompt("Byt namn:",g.name);if(n)save({savings:{goals:goals.map(function(x){return x.id===g.id?{...x,name:n}:x})}})}} style={{fontSize:12,fontWeight:700,cursor:"pointer",borderBottom:"1px dashed "+T.border}}>{g.name}</span>
             </div>
             <div style={{display:"flex",alignItems:"center",gap:6}}>
-              {perMonth>0&&<span style={{fontSize:9,color:T.subtle,fontFamily:"'JetBrains Mono'"}}>{perMonth.toLocaleString("sv")}/mån</span>}
-              <button onClick={function(){if(confirm("Radera "+g.name+"?"))rmGoal(g.id)}} style={{background:"none",border:"none",cursor:"pointer",padding:2}}><Ic n="trash" s={12} c={T.subtle}/></button>
+              <span style={{fontSize:14,fontWeight:800,fontFamily:"'JetBrains Mono'",color:cc}}>{(g.saved||0).toLocaleString("sv")}</span>
+              <button onClick={function(){save({savings:{goals:goals.filter(function(x){return x.id!==g.id})}})}} style={{background:"none",border:"none",cursor:"pointer",padding:1}}><Ic n="trash" s={10} c={T.subtle}/></button>
             </div>
           </div>
-          <div style={{fontSize:22,fontWeight:900,fontFamily:"'JetBrains Mono'",color:T.accent2,marginBottom:4}}>{g.saved.toLocaleString("sv")} kr</div>
+          {perMonth>0&&<div style={{fontSize:8,color:T.subtle,marginBottom:3}}>{perMonth.toLocaleString("sv")} kr/mån</div>}
           {hasTgt&&<div>
-            <div style={{height:6,background:T.surface,borderRadius:3,overflow:"hidden",marginBottom:4}}>
-              <div style={{height:"100%",width:pct+"%",background:done?T.success:"linear-gradient(90deg,"+T.accent+","+T.accent2+")",borderRadius:3}}/>
+            <div style={{height:5,background:T.surface,borderRadius:3,overflow:"hidden",marginBottom:2}}>
+              <div style={{height:"100%",width:pct+"%",background:cc,borderRadius:3}}/>
             </div>
-            <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:T.subtle,marginBottom:6}}>
-              <span>{pct}%</span><span>{done?"Klart!":Math.max(0,g.target-g.saved).toLocaleString("sv")+" kr kvar"}</span>
-            </div>
-            {mo&&<div style={{fontSize:9,color:T.accent,marginBottom:6}}>~{mo} mån kvar</div>}
+            <div style={{fontSize:8,color:T.subtle}}>{pct}% av {g.target.toLocaleString("sv")} kr{monthsLeft!==null?" · ~"+monthsLeft+" mån kvar":""}{g.nextGoal?" → sedan "+((goals.find(function(x){return x.id===g.nextGoal})||{}).name||""):""}</div>
           </div>}
-          <button onClick={function(){var v=prompt("Spara (kr):");if(v&&!isNaN(v)&&Number(v)>0)addSave(g.id,Number(v))}} style={{width:"100%",padding:9,borderRadius:8,border:"none",background:T.accent,color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer"}}>Spara →</button>
-        </div>})}
+          <button onClick={function(){var v=prompt("Spara till "+g.name+" (kr):");if(v&&!isNaN(v)){save({savings:{goals:goals.map(function(x){return x.id===g.id?{...x,saved:(x.saved||0)+Number(v)}:x})}})}}} style={{marginTop:6,padding:"5px 12px",borderRadius:6,border:"1px solid "+cc+"44",background:cc+"08",color:cc,fontSize:10,fontWeight:700,cursor:"pointer"}}>Spara →</button>
+        </div>
+      })}
 
-      <button onClick={function(){var n=prompt("Namn:");if(!n)return;var t=prompt("Mål (kr, 0 = inget tak):")||"0";addGoal(n.trim(),Number(t)||0)}} style={{width:"100%",padding:10,borderRadius:8,border:"1px dashed "+T.accent,background:T.accent+"08",color:T.accent,fontSize:11,fontWeight:700,cursor:"pointer",marginBottom:14}}>+ Nytt sparmål</button>
+      <button onClick={function(){var n=prompt("Namn på nytt sparmål:");if(!n)return;var t=prompt("Mål (0 = inget tak):");if(t===null)return;save({savings:{goals:goals.concat([{id:uid(),name:n,target:Number(t)||0,saved:0}])}})}} style={{width:"100%",padding:10,borderRadius:10,border:"1px dashed "+T.accent,background:T.accent+"05",color:T.accent,fontSize:12,fontWeight:700,cursor:"pointer",marginBottom:20}}>+ Nytt sparmål</button>
 
       {/* Investeringar */}
-      <div style={{marginTop:10}}>
-        <div style={{fontSize:13,fontWeight:700,marginBottom:10}}>Investeringar</div>
-        {investments.filter(function(i){return i.status!=="sold"}).length>0&&<div style={{display:"flex",gap:6,marginBottom:10}}>
-          <div style={{flex:1,background:T.card,border:"1px solid "+T.border,borderRadius:10,padding:"10px 8px",textAlign:"center"}}>
-            <div style={{fontSize:9,color:T.muted}}>Investerat</div>
-            <div style={{fontSize:15,fontWeight:800,fontFamily:"'JetBrains Mono'",color:T.accent}}>{investments.filter(function(i){return i.status!=="sold"}).reduce(function(s,i){return s+i.amount},0).toLocaleString("sv")}</div>
-          </div>
-          <div style={{flex:1,background:T.card,border:"1px solid "+T.border,borderRadius:10,padding:"10px 8px",textAlign:"center"}}>
-            <div style={{fontSize:9,color:T.muted}}>Förväntat värde</div>
-            <div style={{fontSize:15,fontWeight:800,fontFamily:"'JetBrains Mono'",color:T.success}}>{investments.filter(function(i){return i.status!=="sold"}).reduce(function(s,i){return s+(i.expectedValue||i.amount)},0).toLocaleString("sv")}</div>
-          </div>
-        </div>}
-        {investments.filter(function(i){return i.status!=="sold"}).map(function(inv){var ev=inv.expectedValue||inv.amount;var profit=ev-inv.amount;return <div key={inv.id} style={{background:T.card,border:"1px solid "+T.border,borderRadius:10,padding:12,marginBottom:6}}>
-          <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-            <span style={{fontSize:12,fontWeight:700}}>{inv.name}</span><span style={{fontSize:9,color:T.subtle}}>{inv.date}</span>
-          </div>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-            <div style={{flex:1}}>
-              <div style={{fontSize:9,color:T.muted}}>Investerat</div>
-              <div style={{fontSize:15,fontWeight:700,fontFamily:"'JetBrains Mono'"}}>{inv.amount.toLocaleString("sv")}</div>
-            </div>
-            <div style={{background:T.surface,borderRadius:6,padding:"4px 8px"}}>
-              <span style={{fontSize:10,fontWeight:800,color:profit>0?T.success:T.muted}}>+{profit.toLocaleString("sv")}</span>
-            </div>
-            <div style={{flex:1,textAlign:"right"}}>
-              <div style={{fontSize:9,color:T.muted}}>Förväntat</div>
-              <div style={{fontSize:15,fontWeight:700,fontFamily:"'JetBrains Mono'",color:T.success}}>{ev.toLocaleString("sv")}</div>
-            </div>
-          </div>
-          <div style={{display:"flex",gap:4}}>
-            <button onClick={function(){var v=prompt("Faktisk avkastning:");if(v&&!isNaN(v))sellInvest(inv.id,Number(v))}} style={{flex:1,padding:6,borderRadius:6,border:"1px solid "+T.success,background:T.success+"0a",color:T.success,fontSize:10,fontWeight:600,cursor:"pointer"}}>Avsluta</button>
-            <button onClick={function(){if(confirm("Radera?"))rmInvest(inv.id)}} style={{padding:6,borderRadius:6,border:"1px solid "+T.border,background:"transparent",cursor:"pointer"}}><Ic n="trash" s={12} c={T.subtle}/></button>
-          </div>
-        </div>})}
-        <button onClick={function(){var n=prompt("Vad? (t.ex. TS lager)");if(!n)return;var a=prompt("Investerat belopp (kr):");if(!a||isNaN(a))return;var ev=prompt("Förväntat värde (kr):");if(!ev||isNaN(ev))return;addInvest({name:n.trim(),amount:Number(a),expectedValue:Number(ev)})}} style={{width:"100%",padding:8,borderRadius:8,border:"1px dashed "+T.accent,background:T.accent+"08",color:T.accent,fontSize:10,fontWeight:700,cursor:"pointer",marginTop:4}}>+ Ny investering</button>
+      <div style={{fontSize:14,fontWeight:800,marginBottom:8}}>Investeringar</div>
+      <div style={{display:"flex",gap:6,marginBottom:10}}>
+        <div style={{flex:1,background:T.card,border:"1px solid "+T.border,borderRadius:8,padding:"8px",textAlign:"center"}}>
+          <div style={{fontSize:8,color:T.muted}}>Investerat</div>
+          <div style={{fontSize:14,fontWeight:800,fontFamily:"'JetBrains Mono'",color:T.warning}}>{investments.filter(function(i){return i.status==="active"}).reduce(function(s,i){return s+i.amount},0).toLocaleString("sv")}</div>
+        </div>
+        <div style={{flex:1,background:T.card,border:"1px solid "+T.border,borderRadius:8,padding:"8px",textAlign:"center"}}>
+          <div style={{fontSize:8,color:T.muted}}>Förväntat värde</div>
+          <div style={{fontSize:14,fontWeight:800,fontFamily:"'JetBrains Mono'",color:T.success}}>{investments.filter(function(i){return i.status==="active"}).reduce(function(s,i){return s+(i.expectedValue||i.amount)},0).toLocaleString("sv")}</div>
+        </div>
       </div>
 
-      {investments.filter(function(i){return i.status==="sold"}).length>0&&<div style={{marginTop:10}}>
-        <div style={{fontSize:11,fontWeight:700,color:T.muted,marginBottom:6}}>Avslutade</div>
-        {investments.filter(function(i){return i.status==="sold"}).map(function(inv){var p=(inv.actualReturn||0)-inv.amount;return <div key={inv.id} style={{display:"flex",justifyContent:"space-between",padding:"7px 10px",background:T.card,border:"1px solid "+T.border,borderRadius:8,marginBottom:2,opacity:0.5}}>
-          <div><div style={{fontSize:11,fontWeight:600}}>{inv.name}</div><div style={{fontSize:9,color:T.subtle}}>{inv.date}</div></div>
-          <div style={{textAlign:"right"}}><div style={{fontSize:12,fontWeight:700,fontFamily:"'JetBrains Mono'",color:p>=0?T.success:T.danger}}>{p>=0?"+":""}{p.toLocaleString("sv")}</div></div>
-        </div>})}
+      {investments.filter(function(i){return i.status==="active"}).map(function(inv){
+        var profit=(inv.expectedValue||inv.amount)-inv.amount;
+        return <div key={inv.id} style={{background:T.card,border:"1px solid "+T.border,borderRadius:10,padding:"10px 12px",marginBottom:4}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+            <div style={{fontSize:12,fontWeight:700}}>{inv.name}</div>
+            <div style={{fontSize:9,color:T.subtle}}>{inv.date}</div>
+          </div>
+          <div style={{display:"flex",gap:4,alignItems:"baseline",marginBottom:6}}>
+            <span style={{fontSize:11,color:T.muted,fontFamily:"'JetBrains Mono'"}}>{inv.amount.toLocaleString("sv")}</span>
+            <span style={{fontSize:11,color:profit>=0?T.success:T.danger,fontWeight:700}}>→ {profit>=0?"+":""}{profit.toLocaleString("sv")}</span>
+            <span style={{fontSize:11,color:T.text,fontWeight:800,fontFamily:"'JetBrains Mono'"}}>= {(inv.expectedValue||inv.amount).toLocaleString("sv")} kr</span>
+          </div>
+          <div style={{display:"flex",gap:4}}>
+            <button onClick={function(){var v=prompt("Förväntat värde (kr):",inv.expectedValue||inv.amount);if(v!==null&&!isNaN(v))save({investments:investments.map(function(x){return x.id===inv.id?{...x,expectedValue:Number(v)}:x})})}} style={{padding:"4px 10px",borderRadius:5,border:"1px solid "+T.border,background:"transparent",color:T.muted,fontSize:9,fontWeight:600,cursor:"pointer"}}>Ändra värde</button>
+            <button onClick={function(){var v=prompt("Faktisk avkastning (kr):");if(v!==null&&!isNaN(v))save({investments:investments.map(function(x){return x.id===inv.id?{...x,status:"closed",actualReturn:Number(v)}:x})})}} style={{padding:"4px 10px",borderRadius:5,border:"1px solid "+T.warning+"44",background:T.warning+"08",color:T.warning,fontSize:9,fontWeight:600,cursor:"pointer"}}>Avsluta</button>
+            <button onClick={function(){save({investments:investments.filter(function(x){return x.id!==inv.id})})}} style={{padding:"4px 8px",borderRadius:5,border:"1px solid "+T.danger+"33",background:"transparent",color:T.danger,fontSize:9,cursor:"pointer"}}><Ic n="trash" s={10} c={T.danger}/></button>
+          </div>
+        </div>
+      })}
+
+      {/* Avslutade */}
+      {investments.filter(function(i){return i.status==="closed"}).length>0&&<div style={{marginTop:10}}>
+        <div style={{fontSize:10,fontWeight:700,color:T.subtle,marginBottom:4}}>Avslutade</div>
+        {investments.filter(function(i){return i.status==="closed"}).map(function(inv){
+          var profit=(inv.actualReturn||0)-inv.amount;
+          return <div key={inv.id} style={{display:"flex",justifyContent:"space-between",padding:"6px 10px",background:T.card,border:"1px solid "+T.border,borderRadius:6,marginBottom:2,opacity:0.5}}>
+            <span style={{fontSize:11}}>{inv.name}</span>
+            <span style={{fontSize:11,fontWeight:700,fontFamily:"'JetBrains Mono'",color:profit>=0?T.success:T.danger}}>{profit>=0?"+":""}{profit.toLocaleString("sv")} kr</span>
+          </div>
+        })}
       </div>}
+
+      <button onClick={function(){var n=prompt("Namn:");if(!n)return;var a=prompt("Investerat belopp:");if(!a||isNaN(a))return;var ev=prompt("Förväntat värde:");if(ev===null)return;save({investments:investments.concat([{id:uid(),name:n,amount:Number(a),expectedValue:Number(ev)||Number(a),date:dk(new Date()),status:"active"}])})}} style={{width:"100%",padding:10,borderRadius:10,border:"1px dashed "+T.warning,background:T.warning+"05",color:T.warning,fontSize:12,fontWeight:700,cursor:"pointer",marginTop:10}}>+ Ny investering</button>
     </div>}
   </div>);
 }
 
-function IncForm({onSave,onClose}){
-  const[amt,setAmt]=useState("");const[note,setNote]=useState("");const[type,setType]=useState("rorlig");
-  return(<div>
-    <div style={{fontSize:13,fontWeight:700,color:T.success,marginBottom:8}}>Ny inkomst</div>
-    <input value={amt} onChange={function(e){setAmt(e.target.value)}} placeholder="Belopp (kr)" type="number" inputMode="numeric" autoFocus style={{width:"100%",padding:"10px 12px",borderRadius:8,border:"1px solid "+T.border,background:T.surface,color:T.text,fontSize:16,fontWeight:700,fontFamily:"'JetBrains Mono'",outline:"none",marginBottom:6}}/>
-    <input value={note} onChange={function(e){setNote(e.target.value)}} placeholder="Anteckning" style={{width:"100%",padding:"7px 12px",borderRadius:8,border:"1px solid "+T.border,background:T.surface,color:T.text,fontSize:11,outline:"none",marginBottom:8}}/>
-    <div style={{display:"flex",gap:4,marginBottom:10}}>
-      {[{k:"fast",l:"Fast (lön)"},{k:"rorlig",l:"Rörlig (företag)"}].map(function(s){return <button key={s.k} onClick={function(){setType(s.k)}} style={{flex:1,padding:"7px 0",borderRadius:6,border:type===s.k?"1px solid "+T.success:"1px solid "+T.border,background:type===s.k?T.success+"15":"transparent",color:type===s.k?T.success:T.muted,fontSize:11,fontWeight:600,cursor:"pointer"}}>{s.l}</button>})}
-    </div>
-    <div style={{display:"flex",gap:6}}>
-      <button onClick={onClose} style={{flex:1,padding:9,borderRadius:8,border:"1px solid "+T.border,background:"transparent",color:T.muted,fontSize:11,fontWeight:600,cursor:"pointer"}}>Avbryt</button>
-      <button onClick={function(){if(amt&&!isNaN(amt))onSave(Number(amt),note,type)}} style={{flex:2,padding:9,borderRadius:8,border:"none",background:T.success,color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",opacity:amt?"1":"0.4"}}>Spara</button>
-    </div>
-  </div>);
-}
-
-function ExpForm({onSave,onClose}){
-  const[amt,setAmt]=useState("");const[note,setNote]=useState("");
-  return(<div>
-    <div style={{fontSize:13,fontWeight:700,color:T.danger,marginBottom:8}}>Ny utgift</div>
-    <input value={amt} onChange={function(e){setAmt(e.target.value)}} placeholder="Belopp (kr)" type="number" inputMode="numeric" autoFocus style={{width:"100%",padding:"10px 12px",borderRadius:8,border:"1px solid "+T.border,background:T.surface,color:T.text,fontSize:16,fontWeight:700,fontFamily:"'JetBrains Mono'",outline:"none",marginBottom:6}}/>
-    <input value={note} onChange={function(e){setNote(e.target.value)}} placeholder="Anteckning" style={{width:"100%",padding:"7px 12px",borderRadius:8,border:"1px solid "+T.border,background:T.surface,color:T.text,fontSize:11,outline:"none",marginBottom:8}}/>
-    <div style={{display:"flex",gap:6}}>
-      <button onClick={onClose} style={{flex:1,padding:9,borderRadius:8,border:"1px solid "+T.border,background:"transparent",color:T.muted,fontSize:11,fontWeight:600,cursor:"pointer"}}>Avbryt</button>
-      <button onClick={function(){if(amt&&!isNaN(amt))onSave(Number(amt),note)}} style={{flex:2,padding:9,borderRadius:8,border:"none",background:T.danger,color:"#fff",fontSize:11,fontWeight:700,cursor:"pointer",opacity:amt?"1":"0.4"}}>Spara</button>
-    </div>
+function EcoForm({type,onSave,onClose}){
+  const[amount,setAmount]=useState("");
+  var isInc=type==="inc";
+  return(<div style={{display:"flex",gap:4,marginBottom:10,animation:"fi .1s ease-out"}}>
+    <input value={amount} onChange={function(e){setAmount(e.target.value)}} placeholder="Belopp" type="number" inputMode="numeric" autoFocus style={{flex:1,padding:"12px",borderRadius:10,border:"1px solid "+(isInc?T.success:T.danger)+"44",background:T.card,color:T.text,fontSize:16,fontWeight:700,fontFamily:"'JetBrains Mono'",outline:"none"}}/>
+    <button onClick={function(){if(amount&&!isNaN(amount)){if(isInc)onSave(Number(amount),"","rorlig");else onSave(Number(amount),"")}}} style={{padding:"12px 20px",borderRadius:10,border:"none",background:isInc?T.success:T.danger,color:"#fff",fontSize:13,fontWeight:800,cursor:"pointer",opacity:amount?"1":"0.4"}}>Spara</button>
+    <button onClick={onClose} style={{padding:"12px",borderRadius:10,border:"1px solid "+T.border,background:"transparent",color:T.subtle,fontSize:11,fontWeight:600,cursor:"pointer"}}>✕</button>
   </div>);
 }
 
@@ -1070,9 +1439,10 @@ function App(){
   const[selDate,setSelDate]=useState(new Date());
   const[modal,setModal]=useState(null);
   const[tab,setTab]=useState("today");
+  const[ouraCache,setOuraCache]=useState(null);
   const skipRef=useRef(false);
 
-  useEffect(()=>{var timeout=setTimeout(function(){setItems(function(v){return v||DEFAULT_ITEMS});setLoading(false)},3000);(async()=>{try{
+  useEffect(()=>{(async()=>{try{
     var r1=await sb.from('health_data').select('data').eq('id','config').single();
     if(r1.data&&r1.data.data&&r1.data.data.items)setItems(r1.data.data.items);
     else{setItems(DEFAULT_ITEMS);await sb.from('health_data').upsert({id:'config',data:{items:DEFAULT_ITEMS},updated_at:new Date().toISOString()})}
@@ -1084,51 +1454,12 @@ function App(){
     else{await sb.from('health_data').upsert({id:'economy',data:DEFAULT_ECO,updated_at:new Date().toISOString()})}
     var r4=await sb.from('health_data').select('data').eq('id','calendar').single();
     if(r4.data&&r4.data.data)setCalData(r4.data.data);
-    else{await sb.from('health_data').upsert({id:'calendar',data:{events:[],tasks:[]},updated_at:new Date().toISOString()})}
-  }catch(e){setItems(DEFAULT_ITEMS);setChecks({})}clearTimeout(timeout);setLoading(false)})()},[]);
+    else{await sb.from('health_data').upsert({id:'calendar',data:{events:[],tasks:[],recurring:[]},updated_at:new Date().toISOString()})}
+    var r5=await sb.from('health_data').select('data').eq('id','oura').single();
+    if(r5.data&&r5.data.data&&r5.data.data.cached)setOuraCache(r5.data.data.cached);
+  }catch(e){setItems(DEFAULT_ITEMS);setChecks({})}setLoading(false)})()},[]);
 
-  useEffect(()=>{try{var ch=sb.channel('health-sync').on('postgres_changes',{event:'*',schema:'public',table:'health_data'},payload=>{if(!skipRef.current&&payload.new){if(payload.new.id==='config'&&payload.new.data&&payload.new.data.items)setItems(payload.new.data.items);if(payload.new.id==='checks'&&payload.new.data)setChecks(payload.new.data);if(payload.new.id==='economy'&&payload.new.data)setEcoData(payload.new.data);if(payload.new.id==='calendar'&&payload.new.data)setCalData(payload.new.data)}skipRef.current=false}).subscribe();return()=>sb.removeChannel(ch)}catch(e){console.warn('Realtime disabled:',e)}},[]);
-
-  // Notification system
-  const notifiedRef=useRef({});
-  useEffect(function(){
-    try{
-    if(!('Notification' in window))return;
-    if(Notification.permission==='default')Notification.requestPermission().catch(function(){});
-    var iv=setInterval(function(){
-      try{
-      if(Notification.permission!=='granted')return;
-      var now=new Date(),today=dk(now),nowM=now.getHours()*60+now.getMinutes();
-      var evts=((calData&&calData.events)||[]).filter(function(e){return e.date===today&&e.time&&e.notify});
-      evts.forEach(function(e){
-        var p=e.time.split(':').map(Number),eM=p[0]*60+p[1];
-        var diff=eM-nowM;
-        if(diff>0&&diff<=e.notify&&!notifiedRef.current[e.id+today]){
-          notifiedRef.current[e.id+today]=true;
-          try{new Notification('KM Stack — '+e.name,{body:(diff<=1?'NU':'Om '+diff+' min')+(e.place?' · 📍 '+e.place:''),icon:'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">⚡</text></svg>',tag:e.id})}catch(err){}
-        }
-      });
-      // Also check recurring
-      ((calData&&calData.events)||[]).filter(function(e){return e.recurring&&e.time&&e.notify&&e.date!==today}).forEach(function(e){
-        var start=new Date(e.date+'T12:00'),d=new Date(today+'T12:00');
-        if(d<start)return;
-        var match=false;
-        if(e.recurring==='daily')match=true;
-        if(e.recurring==='weekly')match=d.getDay()===start.getDay();
-        if(e.recurring==='biweekly'){var df=Math.round((d-start)/86400000);match=df%14===0}
-        if(e.recurring==='monthly')match=d.getDate()===start.getDate();
-        if(!match)return;
-        var p=e.time.split(':').map(Number),eM=p[0]*60+p[1],diff=eM-nowM;
-        if(diff>0&&diff<=e.notify&&!notifiedRef.current[e.id+today]){
-          notifiedRef.current[e.id+today]=true;
-          try{new Notification('KM Stack — '+e.name,{body:'Om '+diff+' min'+(e.place?' · 📍 '+e.place:''),tag:e.id+today})}catch(err){}
-        }
-      });
-      }catch(e){}
-    },30000);
-    return function(){clearInterval(iv)};
-    }catch(e){console.warn('Notifications disabled')}
-  },[calData]);
+  useEffect(()=>{try{var ch=sb.channel('health-sync').on('postgres_changes',{event:'*',schema:'public',table:'health_data'},payload=>{if(!skipRef.current&&payload.new){if(payload.new.id==='config'&&payload.new.data&&payload.new.data.items)setItems(payload.new.data.items);if(payload.new.id==='checks'&&payload.new.data)setChecks(payload.new.data);if(payload.new.id==='economy'&&payload.new.data)setEcoData(payload.new.data);if(payload.new.id==='calendar'&&payload.new.data)setCalData(payload.new.data);if(payload.new.id==='oura'&&payload.new.data&&payload.new.data.cached)setOuraCache(payload.new.data.cached)}skipRef.current=false}).subscribe();return()=>sb.removeChannel(ch)}catch(e){console.warn('Realtime disabled:',e)}},[]);
 
   const saveItems=useCallback(async(ni)=>{setItems(ni);skipRef.current=true;try{await sb.from('health_data').upsert({id:'config',data:{items:ni},updated_at:new Date().toISOString()})}catch(e){console.error(e)}},[]);
   const saveChecks=useCallback(async(nc)=>{setChecks(nc);skipRef.current=true;try{await sb.from('health_data').upsert({id:'checks',data:nc,updated_at:new Date().toISOString()})}catch(e){console.error(e)}},[]);
@@ -1136,6 +1467,7 @@ function App(){
   const saveCal=useCallback(async(nc)=>{setCalData(nc);skipRef.current=true;try{await sb.from('health_data').upsert({id:'calendar',data:nc,updated_at:new Date().toISOString()})}catch(e){console.error(e)}},[]);
 
   function toggleCheck(id){var nc={...checks},d=dk(selDate);if(!nc[d])nc[d]={};nc[d][id]=!nc[d][id];if(!nc[d][id])delete nc[d][id];saveChecks(nc)}
+  function toggleAllSlot(ids,check){var nc={...checks},d=dk(selDate);if(!nc[d])nc[d]={};ids.forEach(function(id){if(check)nc[d][id]=true;else delete nc[d][id]});saveChecks(nc)}
   function updateItem(item){saveItems(items.map(i=>i.id===item.id?item:i));setModal(null)}
   function deleteItem(id){saveItems(items.filter(i=>i.id!==id));setModal(null)}
   function addItem(item){saveItems([...items,item]);setModal(null)}
@@ -1143,8 +1475,8 @@ function App(){
   if(loading||!items)return <div style={{minHeight:"100vh",background:T.bg,display:"flex",alignItems:"center",justifyContent:"center",color:T.muted}}>Laddar...</div>;
 
   return(<div style={{minHeight:"100vh",background:T.bg,color:T.text,maxWidth:480,margin:"0 auto"}}>
-    {tab==="today"&&<TabToday items={items} checks={checks} selDate={selDate} setSelDate={setSelDate} toggleCheck={toggleCheck} saveChecks={saveChecks}/>}
-    {tab==="calendar"&&<TabCalendar calData={calData} saveCal={saveCal}/>}
+    {tab==="today"&&<TabToday items={items} checks={checks} selDate={selDate} setSelDate={setSelDate} toggleCheck={toggleCheck} toggleAllSlot={toggleAllSlot} ouraCache={ouraCache}/>}
+    {tab==="calendar"&&<TabCalendar calData={calData} saveCal={saveCal} ouraCache={ouraCache}/>}
     {tab==="info"&&<TabInfo items={items} saveItems={saveItems} setModal={setModal}/>}
     {tab==="economy"&&<TabEconomy ecoData={ecoData} saveEco={saveEco}/>}
 
