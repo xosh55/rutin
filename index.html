@@ -1870,6 +1870,52 @@ function TabEconomy({ecoData,saveEco}){
 
     {/* ============ ÖVERSIKT ============ */}
     {sub==="overview"&&<div>
+      {/* Net worth + månadsresultat — kompakt */}
+      {(function(){
+        var invValue=investments.filter(function(i){return i.status==="active"}).reduce(function(s,i){return s+(i.expectedValue||i.amount)},0);
+        var netWorth=liquidity+totalSaved+invValue;
+        // Monthly P/L (senaste 6 mån)
+        var now2=new Date();
+        var mpl=[];
+        for(var mi=5;mi>=0;mi--){
+          var mm=new Date(now2.getFullYear(),now2.getMonth()-mi,1);
+          var mKey=mm.getFullYear()+"-"+String(mm.getMonth()+1).padStart(2,"0");
+          var mIn=0,mEx=0;
+          for(var k in incomeData){if(k.substring(0,7)===mKey)(incomeData[k]||[]).forEach(function(i){mIn+=i.amount})}
+          for(var k in entries){if(k.substring(0,7)===mKey)(entries[k]||[]).forEach(function(e){mEx+=e.amount})}
+          mpl.push({v:mIn-mEx,l:MONTHS[mm.getMonth()],inc:mIn,exp:mEx});
+        }
+        // Sparkline
+        function NwSp(props){
+          var data=props.data,color=props.color,w=props.w||100,h=props.h||18;
+          if(!data||data.length<2)return <div style={{height:h}}/>;
+          var vals=data.map(function(d){return d.v});
+          var mn=Math.min.apply(null,vals),mx=Math.max.apply(null,vals);
+          if(mx===mn)mx=mn+1;
+          var pts=data.map(function(d,i){return Math.round(i/(data.length-1)*w)+","+Math.round(h-1-(d.v-mn)/(mx-mn)*(h-2))});
+          return <svg width={w} height={h} style={{display:"block"}}><path d={"M"+pts.join("L")} fill="none" stroke={color} strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" opacity="0.8"/></svg>
+        }
+        return <div style={{marginBottom:12}}>
+          {/* Net worth box */}
+          <div style={{display:"flex",gap:4,marginBottom:4}}>
+            <div style={{flex:1,background:"linear-gradient(135deg,"+T.accent+"15,"+T.accent2+"10)",border:"1px solid "+T.accent+"22",borderRadius:8,padding:"6px 10px"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <span style={{fontSize:7,color:T.muted}}>Net worth</span>
+                <span style={{fontSize:13,fontWeight:900,color:T.text,fontFamily:"'JetBrains Mono'"}}>{netWorth.toLocaleString("sv")}</span>
+              </div>
+              <NwSp data={mpl.map(function(m,i){return{v:liquidity+totalSaved+invValue+mpl.slice(0,i+1).reduce(function(s,x){return s+x.v},0)}})} color={T.accent2} w={140} h={16}/>
+            </div>
+          </div>
+          {/* Monthly P/L compact */}
+          <div style={{display:"flex",gap:2}}>
+            {mpl.map(function(m,i){var isCur=i===mpl.length-1;return <div key={i} style={{flex:1,background:T.card,border:"1px solid "+(isCur?T.accent+"33":T.border),borderRadius:4,padding:"3px 2px",textAlign:"center"}}>
+              <div style={{fontSize:5,color:isCur?T.text:T.subtle,fontWeight:isCur?700:400}}>{m.l}</div>
+              <div style={{fontSize:8,fontWeight:700,fontFamily:"'JetBrains Mono'",color:m.v>=0?T.success:m.v<0?T.danger:T.subtle}}>{m.v===0?"—":m.v>0?"+"+Math.round(m.v/1000)+"k":Math.round(m.v/1000)+"k"}</div>
+            </div>})}
+          </div>
+        </div>;
+      })()}
+
       {/* Inkomst vs mål */}
       <div style={{marginBottom:14}}>
         <div style={{display:"flex",justifyContent:"space-between",fontSize:10,marginBottom:3}}>
@@ -1994,35 +2040,63 @@ function TabEconomy({ecoData,saveEco}){
 
       <button onClick={function(){var n=prompt("Namn på nytt sparmål:");if(!n)return;var t=prompt("Mål (0 = inget tak):");if(t===null)return;save({savings:{goals:goals.concat([{id:uid(),name:n,target:Number(t)||0,saved:0}])}})}} style={{width:"100%",padding:10,borderRadius:10,border:"1px dashed "+T.accent,background:T.accent+"05",color:T.accent,fontSize:12,fontWeight:700,cursor:"pointer",marginBottom:20}}>+ Nytt sparmål</button>
 
-      {/* Investeringar */}
-      <div style={{fontSize:14,fontWeight:800,marginBottom:8}}>Investeringar</div>
+      {/* Lager / Investeringar */}
+      <div style={{fontSize:14,fontWeight:800,marginBottom:8}}>Lager & Investeringar</div>
       <div style={{display:"flex",gap:6,marginBottom:10}}>
         <div style={{flex:1,background:T.card,border:"1px solid "+T.border,borderRadius:8,padding:"8px",textAlign:"center"}}>
           <div style={{fontSize:8,color:T.muted}}>Investerat</div>
           <div style={{fontSize:14,fontWeight:800,fontFamily:"'JetBrains Mono'",color:T.warning}}>{investments.filter(function(i){return i.status==="active"}).reduce(function(s,i){return s+i.amount},0).toLocaleString("sv")}</div>
         </div>
         <div style={{flex:1,background:T.card,border:"1px solid "+T.border,borderRadius:8,padding:"8px",textAlign:"center"}}>
-          <div style={{fontSize:8,color:T.muted}}>Förväntat värde</div>
-          <div style={{fontSize:14,fontWeight:800,fontFamily:"'JetBrains Mono'",color:T.success}}>{investments.filter(function(i){return i.status==="active"}).reduce(function(s,i){return s+(i.expectedValue||i.amount)},0).toLocaleString("sv")}</div>
+          <div style={{fontSize:8,color:T.muted}}>Sålt totalt</div>
+          <div style={{fontSize:14,fontWeight:800,fontFamily:"'JetBrains Mono'",color:T.success}}>{investments.filter(function(i){return i.status==="active"}).reduce(function(s,i){return s+((i.sales||[]).reduce(function(ss,sl){return ss+sl.amount},0))},0).toLocaleString("sv")}</div>
         </div>
       </div>
 
       {investments.filter(function(i){return i.status==="active"}).map(function(inv){
-        var profit=(inv.expectedValue||inv.amount)-inv.amount;
-        return <div key={inv.id} style={{background:T.card,border:"1px solid "+T.border,borderRadius:10,padding:"10px 12px",marginBottom:4}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
-            <div style={{fontSize:12,fontWeight:700}}>{inv.name}</div>
+        var sales=inv.sales||[];
+        var totalSold=sales.reduce(function(s,sl){return s+sl.amount},0);
+        var profit=totalSold-inv.amount;
+        var expected=inv.expectedValue||inv.amount;
+        var soldPct=expected>0?Math.round(totalSold/expected*100):0;
+        var breakEvenPct=inv.amount>0?Math.round(totalSold/inv.amount*100):0;
+        var atBreakEven=totalSold>=inv.amount;
+        return <div key={inv.id} style={{background:T.card,border:"1px solid "+T.border,borderRadius:10,padding:"10px 12px",marginBottom:6}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+            <div style={{fontSize:13,fontWeight:700}}>{inv.name}</div>
             <div style={{fontSize:9,color:T.subtle}}>{inv.date}</div>
           </div>
-          <div style={{display:"flex",gap:4,alignItems:"baseline",marginBottom:6}}>
-            <span style={{fontSize:11,color:T.muted,fontFamily:"'JetBrains Mono'"}}>{inv.amount.toLocaleString("sv")}</span>
-            <span style={{fontSize:11,color:profit>=0?T.success:T.danger,fontWeight:700}}>→ {profit>=0?"+":""}{profit.toLocaleString("sv")}</span>
-            <span style={{fontSize:11,color:T.text,fontWeight:800,fontFamily:"'JetBrains Mono'"}}>= {(inv.expectedValue||inv.amount).toLocaleString("sv")} kr</span>
+          {/* Progress bar */}
+          <div style={{marginBottom:6}}>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:9,color:T.muted,marginBottom:2}}>
+              <span>Sålt {soldPct}%</span>
+              <span style={{color:atBreakEven?T.success:T.warning}}>{atBreakEven?"Break-even nådd":"BE vid "+Math.round(inv.amount/expected*100)+"%"}</span>
+            </div>
+            <div style={{height:5,borderRadius:3,background:T.surface,overflow:"hidden",position:"relative"}}>
+              <div style={{position:"absolute",left:0,top:0,height:"100%",width:soldPct+"%",borderRadius:3,background:atBreakEven?T.success:T.accent2}}/>
+              {!atBreakEven&&<div style={{position:"absolute",left:Math.round(inv.amount/expected*100)+"%",top:0,width:1,height:"100%",background:T.warning}}/>}
+            </div>
           </div>
-          <div style={{display:"flex",gap:4}}>
-            <button onClick={function(){var v=prompt("Förväntat värde (kr):",inv.expectedValue||inv.amount);if(v!==null&&!isNaN(v))save({investments:investments.map(function(x){return x.id===inv.id?{...x,expectedValue:Number(v)}:x})})}} style={{padding:"4px 10px",borderRadius:5,border:"1px solid "+T.border,background:"transparent",color:T.muted,fontSize:9,fontWeight:600,cursor:"pointer"}}>Ändra värde</button>
-            <button onClick={function(){var v=prompt("Faktisk avkastning (kr):");if(v!==null&&!isNaN(v))save({investments:investments.map(function(x){return x.id===inv.id?{...x,status:"closed",actualReturn:Number(v)}:x})})}} style={{padding:"4px 10px",borderRadius:5,border:"1px solid "+T.warning+"44",background:T.warning+"08",color:T.warning,fontSize:9,fontWeight:600,cursor:"pointer"}}>Avsluta</button>
-            <button onClick={function(){save({investments:investments.filter(function(x){return x.id!==inv.id})})}} style={{padding:"4px 8px",borderRadius:5,border:"1px solid "+T.danger+"33",background:"transparent",color:T.danger,fontSize:9,cursor:"pointer"}}><Ic n="trash" s={10} c={T.danger}/></button>
+          {/* Stats row */}
+          <div style={{display:"flex",gap:4,marginBottom:6}}>
+            {[{l:"Inköp",v:inv.amount,c:T.muted},{l:"Sålt",v:totalSold,c:T.accent2},{l:"Vinst",v:profit,c:profit>=0?T.success:T.danger}].map(function(s,i){return <div key={i} style={{flex:1,textAlign:"center"}}>
+              <div style={{fontSize:7,color:T.subtle}}>{s.l}</div>
+              <div style={{fontSize:11,fontWeight:700,fontFamily:"'JetBrains Mono'",color:s.c}}>{s.v>=0&&s.l==="Vinst"?"+":""}{s.v.toLocaleString("sv")}</div>
+            </div>})}
+          </div>
+          {/* Sales log */}
+          {sales.length>0&&<div style={{marginBottom:6}}>
+            {sales.slice().reverse().slice(0,5).map(function(sl,i){return <div key={sl.id||i} style={{display:"flex",justifyContent:"space-between",padding:"3px 6px",fontSize:9,borderBottom:"1px solid "+T.border+"33"}}>
+              <span style={{color:T.subtle}}>{sl.date}</span>
+              <span style={{color:T.success,fontFamily:"'JetBrains Mono'",fontWeight:600}}>+{sl.amount.toLocaleString("sv")} kr</span>
+              <button onClick={function(){save({investments:investments.map(function(x){return x.id===inv.id?Object.assign({},x,{sales:sales.filter(function(s){return s.id!==sl.id})}):x})})}} style={{background:"none",border:"none",cursor:"pointer",padding:0}}><Ic n="x" s={9} c={T.subtle}/></button>
+            </div>})}
+          </div>}
+          {/* Action buttons */}
+          <div style={{display:"flex",gap:3}}>
+            <button onClick={function(){var v=prompt("Försäljning (kr):");if(v&&!isNaN(v)&&Number(v)>0){var ns=sales.concat([{id:uid(),date:dk(new Date()),amount:Number(v)}]);save({investments:investments.map(function(x){return x.id===inv.id?Object.assign({},x,{sales:ns}):x})})}}} style={{flex:1,padding:"6px 0",borderRadius:5,border:"1px solid "+T.success+"44",background:T.success+"08",color:T.success,fontSize:9,fontWeight:700,cursor:"pointer"}}>+ Försäljning</button>
+            <button onClick={function(){var v=prompt("Förväntat värde (kr):",inv.expectedValue||inv.amount);if(v!==null&&!isNaN(v))save({investments:investments.map(function(x){return x.id===inv.id?Object.assign({},x,{expectedValue:Number(v)}):x})})}} style={{padding:"6px 8px",borderRadius:5,border:"1px solid "+T.border,background:"transparent",color:T.muted,fontSize:9,cursor:"pointer"}}><Ic n="edit" s={9} c={T.muted}/></button>
+            <button onClick={function(){save({investments:investments.filter(function(x){return x.id!==inv.id})})}} style={{padding:"6px 8px",borderRadius:5,border:"1px solid "+T.danger+"33",background:"transparent",color:T.danger,fontSize:9,cursor:"pointer"}}><Ic n="trash" s={9} c={T.danger}/></button>
           </div>
         </div>
       })}
@@ -2039,7 +2113,7 @@ function TabEconomy({ecoData,saveEco}){
         })}
       </div>}
 
-      <button onClick={function(){var n=prompt("Namn:");if(!n)return;var a=prompt("Investerat belopp:");if(!a||isNaN(a))return;var ev=prompt("Förväntat värde:");if(ev===null)return;save({investments:investments.concat([{id:uid(),name:n,amount:Number(a),expectedValue:Number(ev)||Number(a),date:dk(new Date()),status:"active"}])})}} style={{width:"100%",padding:10,borderRadius:10,border:"1px dashed "+T.warning,background:T.warning+"05",color:T.warning,fontSize:12,fontWeight:700,cursor:"pointer",marginTop:10}}>+ Ny investering</button>
+      <button onClick={function(){var n=prompt("Namn:");if(!n)return;var a=prompt("Inköpspris (kr):");if(!a||isNaN(a))return;var ev=prompt("Förväntat försäljningsvärde:");if(ev===null)return;save({investments:investments.concat([{id:uid(),name:n,amount:Number(a),expectedValue:Number(ev)||Number(a),date:dk(new Date()),status:"active",sales:[]}])})}} style={{width:"100%",padding:10,borderRadius:10,border:"1px dashed "+T.warning,background:T.warning+"05",color:T.warning,fontSize:12,fontWeight:700,cursor:"pointer",marginTop:10}}>+ Ny lagerpost</button>
     </div>}
   </div>);
 }
