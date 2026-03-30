@@ -1375,7 +1375,7 @@ function TabCalendar({calData,saveCal,ouraCache}){
   function tasksOn(d){return tasks.filter(function(t){return t.date===d}).length}
 
   // === DRAG & DROP / RESIZE ===
-  var DRAG_HH=52,DRAG_START_H=5,DRAG_THRESHOLD=5;
+  var DRAG_HH=56,DRAG_START_H=8,DRAG_THRESHOLD=5;
   function yToMin(y){return Math.round((y/DRAG_HH*60+DRAG_START_H*60)/5)*5}
   function minToTime(m){var hh=Math.floor(m/60)%24;var mm=m%60;return String(hh).padStart(2,"0")+":"+String(mm).padStart(2,"0")}
 
@@ -1550,7 +1550,7 @@ function TabCalendar({calData,saveCal,ouraCache}){
       /* Build flow nodes: events + gaps */
       var nodes=[];var dayStartM=8*60;var dayEndM=26*60;
       /* Split gaps into hourly chunks */
-      function pushGap(arr,s,e){var dur=e-s;if(dur<15)return;if(dur<=60){arr.push({type:"gap",startM:s,endM:e,dur:dur});return}var cur=s;while(cur<e){var chunkEnd=Math.min(cur+60,e);if(e-chunkEnd<15)chunkEnd=e;arr.push({type:"gap",startM:cur,endM:chunkEnd,dur:chunkEnd-cur});cur=chunkEnd}}
+      function pushGap(arr,s,e){var dur=e-s;if(dur<15)return;/* Snap to hour boundaries */var cur=s;var firstHour=Math.ceil(s/60)*60;if(firstHour>s&&firstHour<e){if(firstHour-s>=10)arr.push({type:"gap",startM:s,endM:firstHour,dur:firstHour-s});cur=firstHour}while(cur<e){var chunkEnd=Math.min(cur+60,e);if(e-chunkEnd<10)chunkEnd=e;arr.push({type:"gap",startM:cur,endM:chunkEnd,dur:chunkEnd-cur});cur=chunkEnd}}
       if(tEvents.length>0&&tEvents[0].startM>dayStartM+15){
         pushGap(nodes,dayStartM,tEvents[0].startM);
       }else if(tEvents.length===0){
@@ -1622,7 +1622,7 @@ function TabCalendar({calData,saveCal,ouraCache}){
           function mH(dur){return Math.max(22,dur/60*PPH)}
           /* Hour labels */
           var hLabels=[];for(var hh=8;hh<26;hh++)hLabels.push(hh);
-          return <div style={{position:"relative",height:totalH+10,marginBottom:12}} onTouchMove={onSwipeMove} onMouseMove={onSwipeMove} onTouchEnd={onSwipeEnd} onMouseUp={onSwipeEnd} onMouseLeave={onSwipeEnd}>
+          return <div style={{position:"relative",height:totalH+10,marginBottom:12}} onTouchMove={function(e){if(dragRef.current.pending||dragRef.current.active){onDragMove(e)}else{onSwipeMove(e)}}} onMouseMove={function(e){if(dragRef.current.pending||dragRef.current.active){onDragMove(e)}else{onSwipeMove(e)}}} onTouchEnd={function(){if(dragRef.current.pending||dragRef.current.active){onDragEnd()}else{onSwipeEnd()}}} onMouseUp={function(){if(dragRef.current.pending||dragRef.current.active){onDragEnd()}else{onSwipeEnd()}}} onMouseLeave={function(){if(dragRef.current.pending||dragRef.current.active){onDragEnd()}else{onSwipeEnd()}}}>
             {/* Hour labels + grid lines */}
             {hLabels.map(function(h){var label=String(h%24).padStart(2,"0")+":00";return <div key={h} style={{position:"absolute",top:mTop(h*60),left:0,right:0,height:1,borderTop:"1px solid "+T.border+"18"}}>
               <span style={{position:"absolute",top:-6,left:0,fontSize:8,fontWeight:600,color:T.subtle+"77",fontFamily:"'JetBrains Mono'",width:32,textAlign:"right"}}>{label}</span>
@@ -1642,6 +1642,7 @@ function TabCalendar({calData,saveCal,ouraCache}){
               var ev=node.ev;var st=evSt(ev);var cc=evColors[ev.category]||T.muted;
               var isPassed=st==="passed";var isActive=st==="active";
               var isExp=expandedEv===ev.id;var prog=isActive?evProg(ev):0;
+              var isDragging=dragRef.current.active&&dragRef.current.evId===ev.id;
               var isSwiping=swipingId===ev.id;var dx=isSwiping?swipeDx:0;
               var swipeLabel=dx>60?"→ Skippa":(dx<-60?"Radera ←":"");
               var top=mTop(ev.startM);var h=mH(ev.duration||30);
@@ -1658,7 +1659,7 @@ function TabCalendar({calData,saveCal,ouraCache}){
                   onClick={function(){setExpandedEv(isExp?null:ev.id)}}
                   onTouchStart={function(e4){onSwipeStart(ev.id,e4)}}
                   onMouseDown={function(e4){if(e4.button===0)onSwipeStart(ev.id,e4)}}
-                  style={{position:"relative",marginLeft:6,padding:h<30?"3px 8px":"6px 10px",background:isPassed?T.card+"88":T.card,border:"1px solid "+(isActive?cc+"55":T.border),borderLeft:"3px solid "+cc,borderRadius:8,opacity:isPassed?0.5:1,cursor:"pointer",transition:"all .15s",transform:isSwiping?"translateX("+dx+"px)":"none",boxShadow:isActive?"0 2px 12px "+cc+"22":"none",height:isExp?"auto":Math.max(20,h-4),overflow:isExp?"visible":"hidden"}}>
+                  style={{position:"relative",marginLeft:6,padding:h<30?"3px 8px":"6px 10px",background:isPassed?T.card+"88":T.card,border:"1px solid "+(isActive?cc+"55":T.border),borderLeft:"3px solid "+cc,borderRadius:8,opacity:isDragging?0.3:(isPassed?0.5:1),cursor:"pointer",transition:isDragging?"none":"all .15s",transform:isSwiping?"translateX("+dx+"px)":"none",boxShadow:isActive?"0 2px 12px "+cc+"22":"none",height:isExp?"auto":Math.max(20,h-4),overflow:isExp?"visible":"hidden"}}>
                   <div style={{display:"flex",alignItems:"center",gap:6}}>
                     <div style={{fontSize:9,fontWeight:700,color:isPassed?T.subtle:cc,fontFamily:"'JetBrains Mono'",flexShrink:0}}>{ev.time}</div>
                     <div style={{flex:1,minWidth:0}}>
@@ -1679,9 +1680,25 @@ function TabCalendar({calData,saveCal,ouraCache}){
                     {!ev.auto&&<button onClick={function(e2){e2.stopPropagation();var tom=new Date(selDate);tom.setDate(tom.getDate()+1);var td=dk(tom);saveCal({...cal,events:[...events,{id:uid(),date:td,name:ev.name,time:ev.time,duration:ev.duration,category:ev.category,company:ev.company||"",notes:ev.notes||""}]})}} style={{padding:"4px 8px",borderRadius:5,border:"1px solid "+T.accent+"44",background:T.accent+"08",color:T.accent,fontSize:8,fontWeight:600,cursor:"pointer"}}>📋 Imorgon</button>}
                     <button onClick={function(e2){e2.stopPropagation();deleteForToday(ev)}} style={{padding:"4px 8px",borderRadius:5,border:"1px solid "+T.danger+"33",background:T.danger+"08",color:T.danger,fontSize:8,fontWeight:600,cursor:"pointer"}}>🗑 Radera</button>
                   </div>}
+                  {/* Resize handle */}
+                  {!ev.auto&&!ev.recurring&&!isExp&&<div
+                    onTouchStart={function(e5){e5.stopPropagation();onDragStart(ev.id,"resize",e5)}}
+                    onMouseDown={function(e5){e5.stopPropagation();if(e5.button===0)onDragStart(ev.id,"resize",e5)}}
+                    style={{position:"absolute",bottom:0,left:0,right:0,height:10,cursor:"ns-resize",display:"flex",justifyContent:"center",alignItems:"center"}}><div style={{width:24,height:3,borderRadius:2,background:cc+"44"}}/></div>}
                 </div>
               </div>
             })}
+            {/* Drag ghost */}
+            {dragRef.current.active&&(function(){
+              var d=dragRef.current;var gEv=tEvents.find(function(x){return x.id===d.evId});
+              if(!gEv)return null;var gcc=evColors[gEv.category]||T.muted;
+              var gTop=d.mode==="move"?mTop(d.curMin):mTop(gEv.startM);
+              var gH=d.mode==="resize"?mH(d.curDur):mH(gEv.duration||30);
+              return <div style={{position:"absolute",top:gTop,left:44,right:0,height:gH,background:gcc+"25",border:"2px solid "+gcc,borderLeft:"4px solid "+gcc,borderRadius:8,padding:"4px 8px",zIndex:20,boxShadow:"0 4px 16px rgba(0,0,0,0.3)",pointerEvents:"none"}}>
+                <div style={{fontSize:10,fontWeight:700,color:gcc}}>{gEv.company?"🏢 "+gEv.company+" — ":""}{gEv.name}</div>
+                <div style={{fontSize:8,fontWeight:700,color:gcc,fontFamily:"'JetBrains Mono'"}}>{d.mode==="move"?minToTime(d.curMin):gEv.time} · {d.mode==="resize"?d.curDur:(gEv.duration||30)}m</div>
+              </div>
+            })()}
             {/* Nu-linje */}
             {isToday&&nowM>=dsM&&nowM<=deM&&<div style={{position:"absolute",top:mTop(nowM),left:34,right:0,zIndex:15,pointerEvents:"none",transition:"top 60s linear"}}>
               <div style={{display:"flex",alignItems:"center"}}><div style={{width:12,height:12,borderRadius:"50%",background:T.danger,marginLeft:-6,animation:"glow 2s ease-in-out infinite"}}/><div style={{flex:1,height:2,background:T.danger,opacity:0.7}}/></div>
