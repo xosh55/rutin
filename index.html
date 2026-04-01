@@ -60,15 +60,17 @@ function getTraining(dow){
 }
 
 const INFO_DATA={
-  "pep-semax":{title:"N-Acetyl Semax Amidate",cat:"Peptider",dose:"600mcg (0.06ml)",concentration:"30mg/3ml = 10mg/ml",zone:"Vänster mage nedre",schedule:"Mån-Lör morgon",pause:"4-6v på / 2v av",benefits:["Förbättrad fokus och koncentration","Ökad BDNF (hjärnans tillväxtfaktor)","Stödjer minne och inlärning","Neuroprotektiv effekt","Minskad mental trötthet"],sideEffects:["Huvudvärk (ovanligt)","Irritation vid injektionsställe"],timeline:"Vecka 1-2: Subtil förbättring i fokus. Vecka 3-4: Tydligare kognitiv skärpa. Vecka 5-6: Full effekt.",recDose:"200-600mcg/dag. Högre doser ger inte nödvändigtvis bättre effekt."},
-  "pep-frag-am":{title:"HGH Fragment 176-191",cat:"Peptider",dose:"500mcg morgon + 250mcg pre-workout",concentration:"5mg/2ml = 2.5mg/ml",zone:"Vänster mage/lår",schedule:"Dagligen (fastande)",pause:"Kör tills mål nått → underhåll 250mcg/dag",benefits:["Riktar fettförbränning (speciellt bukfett/flanks)","Stör inte blodsockernivåer","Förbättrad kroppskomposition","Stimulerar lipolys utan anabol effekt"],sideEffects:["Lätt rodnad vid injektion","Hunger kan öka initialt","Domningar/stickningar (sällsynt)"],timeline:"Vecka 2-4: Minskad vätska, kroppen börjar svara. Vecka 4-8: Synlig reduktion av flanks/bukfett. Vecka 8-12: Betydande skillnad i kroppskomposition.",recDose:"250-500mcg 2x/dag, fastande mage. Max 1000mcg/dag."},
-  "pep-ghkcu":{title:"GHK-Cu",cat:"Peptider",dose:"3.33mg (0.10ml)",concentration:"100mg/3ml = 33.3mg/ml",zone:"Vänster lår",schedule:"Mån-Lör kväll",pause:"6/1 — mån-lör aktiv, söndag vila",benefits:["Stimulerar kollagensyntes och hudförnyelse","Minskar pigmentfläckar och ojämn hudton","Förbättrar hudens elasticitet","Påskyndar sårläkning","Minskar inflammation","Stödjer hårfolliklar"],sideEffects:["Rodnad/svullnad vid injektion","Smärta på injektionsstället (koppar kan svida)"],timeline:"Vecka 2-4: Förbättrad hudkänsla. Vecka 4-8: Synlig förbättring av hudton. Vecka 8-12: Minskade pigmentfläckar. Vecka 12+: Löpande underhåll.",recDose:"1-3mg/dag subkutant. Blanda ALDRIG med andra peptider."},
-  "pep-bpc":{title:"BPC-157",cat:"Peptider",dose:"667mcg (0.10ml)",concentration:"20mg/3ml = 6.67mg/ml",zone:"Vänster arm",schedule:"Varannan dag",pause:"8v på / 4v av",benefits:["Accelererar läkning av senor och ligament","Skyddar mag-tarmkanalen","Minskar inflammation systemiskt","Förbättrar blodkärlsbildning (angiogenes)","Neuroprotektiva egenskaper","Motverkar NSAID-skador"],sideEffects:["Yrsel (sällsynt)","Illamående (sällsynt)","Rodnad vid injektion"],timeline:"Vecka 1-2: Minskad inflammation. Vecka 2-4: Förbättrad rörlighet i skadade områden. Vecka 4-8: Betydande läkning.",recDose:"250-500mcg 1-2x/dag. Kan kombineras med TB-500 i samma spruta."},
-  "pep-tb500":{title:"TB-500 (Thymosin Beta-4)",cat:"Peptider",dose:"667mcg (0.10ml)",concentration:"20mg/3ml = 6.67mg/ml",zone:"Höger arm (samma spruta som BPC)",schedule:"Varannan dag",pause:"8v på / 4v av",benefits:["Kraftfull anti-inflammatorisk effekt","Stimulerar cellmigration till skadade områden","Förbättrar flexibilitet och rörlighet","Minskar ärrbildning","Synergistisk med BPC-157"],sideEffects:["Trötthet initialt","Huvudvärk (ovanligt)","Lätt illamående"],timeline:"Vecka 1-3: Minskad stelhet. Vecka 3-6: Förbättrad återhämtning. Vecka 6-8: Full effekt i kombination med BPC.",recDose:"500-1000mcg varannan dag eller 2-3x/vecka."},
-  "pep-reta":{title:"Retatrutide",cat:"Peptider",dose:"4mg (0.30ml)",concentration:"40mg/3ml = 13.3mg/ml",zone:"Vänster mage ovan",schedule:"Söndag",pause:"Kör tills mål → nedtrappning 4mg→2mg underhåll",benefits:["Trippel-agonist (GIP/GLP-1/Glukagon)","Kraftig aptitdämpning","Accelererad fettförbränning","Förbättrad insulinkänslighet","Ökad energiförbrukning via glukagon"],sideEffects:["Illamående (vanligt initialt)","Förstoppning eller diarré","Minskad aptit (önskad effekt)","Reaktion vid injektionsstället","Halsbränna"],timeline:"Vecka 1-4: Aptiten minskar märkbart. Vecka 4-8: 3-5% kroppsviktsförlust. Vecka 8-16: 8-12% total reduktion. Vecka 16+: Underhållsfas.",recDose:"Upptrappning: 1mg→2mg→4mg veckovis. Max 4mg/vecka. ALDRIG samma spruta som Cagrilintide."},
-  "pep-cagri":{title:"Cagrilintide",cat:"Peptider",dose:"1mg (0.20ml)",concentration:"10mg/2ml = 5mg/ml",zone:"Höger mage ovan",schedule:"Söndag",pause:"Samma som Retatrutide",benefits:["Amylin-analog — förstärker mättnadskänsla","Kompletterar Retatrutide via annan mekanism","Fördröjer magsäckstömning","Minskar glukagon-sekretion","Förbättrar blodsockerkontroll"],sideEffects:["Illamående (vanligt med Retatrutide)","Reaktion vid injektionsstället","Förstoppning"],timeline:"Synergistisk med Retatrutide — förstärker effekten inom 2-4 veckor.",recDose:"0.5-2mg/vecka. Separata injektioner från Retatrutide med 5-10 min mellanrum."},
-  "pep-epitalon":{title:"Epitalon",cat:"Peptider",dose:"5mg/dag (kur: 10 dagar)",concentration:"50mg vial",zone:"Höger lår",schedule:"Kur-format 2x/år",pause:"Kur 1: datum ej bestämt. Kur 2: september (10mg/dag)",benefits:["Aktiverar telomeras — skyddar telomerer","Anti-aging på cellnivå","Förbättrad sömnkvalitet","Reglerar melatoninproduktion","Stödjer immunfunktion"],sideEffects:["Minimal — en av de säkraste peptiderna","Sömnighet initialt (melatonineffekt)"],timeline:"Effekten är kumulativ — märks inte direkt. Telomereffekter mäts över månader/år.",recDose:"5-10mg/dag i 10-20 dagar, 2 kurer/år."},
-  "pep-cjcipa":{title:"CJC-1295 + Ipamorelin",cat:"Peptider",dose:"CJC 0.40ml + Ipa 0.08ml",concentration:"5mg+5mg/vial",zone:"Höger mage nedre (samma spruta)",schedule:"1x/vecka kväll fastemage — start 1 maj",pause:"12v på / 4-6v av. Paus ca 23 juli.",benefits:["Stimulerar naturlig GH-frisättning","Förbättrad sömnkvalitet","Ökad fettförbränning","Snabbare återhämtning","Förbättrad hudkvalitet","Synergistisk med Fragment 176-191"],sideEffects:["Vattenretention initialt","Stickningar/domningar i händer","Ökad hunger","Trötthet efter injektion"],timeline:"Vecka 1-4: Förbättrad sömn. Vecka 4-8: Bättre återhämtning. Vecka 8-12: Synliga kroppskompositionsförändringar.",recDose:"CJC: 1-2mg/vecka. Ipa: 100-300mcg/gång. Kväll på fastande mage."},
+  "pep-semax":{title:"N-Acetyl Semax Amidate",cat:"Peptider",dose:"300mcg (0.03ml)",concentration:"30mg/3ml = 10mg/ml",zone:"Zon 3 — Vänster mage nedre",schedule:"Mån-Lör 08:30",pause:"6v på / 2v av",benefits:["Förbättrad fokus och koncentration","Ökad BDNF (hjärnans tillväxtfaktor)","Stödjer minne och inlärning","Neuroprotektiv effekt","Minskad mental trötthet"],sideEffects:["Sömnproblem vid 600mcg — sänkt till 300mcg","Huvudvärk (ovanligt)"],timeline:"Vecka 1-2: Subtil förbättring i fokus. Vecka 3-4: Tydligare kognitiv skärpa. Vecka 5-6: Full effekt.",recDose:"200-600mcg/dag. Sänkt från 600→300mcg pga sömnproblem."},
+  "pep-frag-am":{title:"HGH Fragment 176-191",cat:"Peptider — AVSLUTAS ~17 apr",dose:"500mcg morgon",concentration:"5mg/2ml = 2.5mg/ml",zone:"Vänster mage/lår",schedule:"Dagligen (fastande) — SISTA VIAL",pause:"Avslutas ~17 april, ersätts av CJC+Ipa",benefits:["Riktar fettförbränning (speciellt bukfett/flanks)","Stör inte blodsockernivåer","Förbättrad kroppskomposition"],sideEffects:["Lätt rodnad vid injektion","Hunger kan öka initialt"],timeline:"Avslutas ~17 april. Ersätts av CJC+Ipa.",recDose:"Avslutas."},
+  "pep-ghkcu":{title:"GHK-Cu",cat:"Peptider",dose:"3.33mg (0.10ml) → 2mg från v13",concentration:"100mg/3ml = 33.3mg/ml",zone:"Zon 7 — Vänster lår",schedule:"Mån-Lör 21:00, söndag vila",pause:"Löpande — söndag vila. Underhåll 2mg/dag från 27 juni",benefits:["Stimulerar kollagensyntes och hudförnyelse","Minskar pigmentfläckar och ojämn hudton","Förbättrar hudens elasticitet","Påskyndar sårläkning","Minskar inflammation","Stödjer hårfolliklar"],sideEffects:["Rodnad/svullnad vid injektion","Smärta på injektionsstället (koppar kan svida)"],timeline:"Vecka 2-4: Förbättrad hudkänsla. Vecka 4-8: Synlig förbättring av hudton. Vecka 12+: Underhåll 2mg.",recDose:"1-3mg/dag subkutant. Blanda ALDRIG med andra peptider."},
+  "pep-bpc":{title:"BPC-157",cat:"Peptider",dose:"333mcg dagligen (0.05ml)",concentration:"20mg/3ml = 6.67mg/ml",zone:"Zon 5 — Vänster arm",schedule:"Dagligen 22:00 (samma spruta som TB-500)",pause:"8v på / 4v av. Paus 1: 23 maj–19 jun. Paus 2: 15 aug–4 sep.",benefits:["Accelererar läkning av senor och ligament","Skyddar mag-tarmkanalen","Minskar inflammation systemiskt","Förbättrar blodkärlsbildning (angiogenes)","Motverkar NSAID-skador"],sideEffects:["Yrsel (sällsynt)","Illamående (sällsynt)"],timeline:"Vecka 1-2: Minskad inflammation. Vecka 2-4: Förbättrad rörlighet. Vecka 4-8: Betydande läkning.",recDose:"333mcg dagligen. Samma spruta som TB-500."},
+  "pep-tb500":{title:"TB-500 (Thymosin Beta-4)",cat:"Peptider",dose:"333mcg dagligen (0.05ml)",concentration:"20mg/3ml = 6.67mg/ml",zone:"Zon 5 — Samma spruta som BPC",schedule:"Dagligen 22:00",pause:"8v på / 4v av. Följer BPC exakt.",benefits:["Kraftfull anti-inflammatorisk effekt","Stimulerar cellmigration till skadade områden","Förbättrar flexibilitet och rörlighet","Minskar ärrbildning","Synergistisk med BPC-157"],sideEffects:["Trötthet initialt","Huvudvärk (ovanligt)"],timeline:"Vecka 1-3: Minskad stelhet. Vecka 3-6: Förbättrad återhämtning. Vecka 6-8: Full effekt.",recDose:"333mcg dagligen. Samma spruta som BPC-157."},
+  "pep-reta":{title:"Retatrutide",cat:"Peptider",dose:"4mg (0.30ml)",concentration:"40mg/3ml = 13.3mg/ml",zone:"Zon 1 — Vänster mage ovan",schedule:"Söndag 08:00 fastande",pause:"Kör tills mål → 4mg→3mg(2v)→2mg underhåll",benefits:["Trippel-agonist (GIP/GLP-1/Glukagon)","Kraftig aptitdämpning","Accelererad fettförbränning","Förbättrad insulinkänslighet","Ökad energiförbrukning via glukagon"],sideEffects:["Illamående (vanligt initialt)","Förstoppning eller diarré","Minskad aptit (önskad effekt)","Halsbränna"],timeline:"Vecka 1-4: Aptiten minskar. Vecka 4-8: 3-5% viktnedgång. Vecka 8-16: 8-12% total. Vecka 16+: Underhåll.",recDose:"Max 4mg/vecka. ALDRIG blanda med andra peptider."},
+  "pep-epitalon":{title:"Epitalon",cat:"Peptider",dose:"Kur 1: 5mg/dag 10d (9-18 maj). Kur 2: 10mg/dag 10d (1-10 sep)",concentration:"50mg vial",zone:"Zon 8 — Höger lår",schedule:"Kur-format 2x/år",pause:"Kur 1: 9-18 maj. Kur 2: 1-10 sep.",benefits:["Aktiverar telomeras — skyddar telomerer","Anti-aging på cellnivå","Förbättrad sömnkvalitet via melatonin","Stödjer immunfunktion"],sideEffects:["Sömnighet initialt (melatonineffekt)","Minimal risk"],timeline:"Kumulativ effekt. Sömnförbättring under kur. Telomereffekter över månader/år.",recDose:"5-10mg/dag i 10-20 dagar, 2 kurer/år."},
+  "pep-cjcipa":{title:"CJC-1295 + Ipamorelin",cat:"Peptider",dose:"CJC 100mcg + Ipa 100mcg (samma spruta)",concentration:"5mg+5mg/vial",zone:"Zon 4 — Höger mage nedre",schedule:"Dagligen 22:30 fastande 2h+ — START 20 april",pause:"12v på / 6v av. Paus 1: 13 jul–23 aug.",benefits:["Stimulerar naturlig GH-frisättning under sömn","Fettoxidation nattetid","Förbättrad sömnkvalitet","Snabbare recovery","Bättre hudkvalitet","Ersätter Fragment med bredare effekt"],sideEffects:["Vattenretention initialt","Stickningar/domningar i händer","Ökad hunger"],timeline:"Vecka 1-4: Förbättrad sömn. Vecka 4-8: Bättre recovery. Vecka 8-12: Full effekt — fettförbränning + muskelkvalitet.",recDose:"CJC 100mcg + Ipa 100mcg dagligen. Kväll fastande mage."},
+  "pep-dsip":{title:"DSIP (Delta Sleep Inducing Peptide)",cat:"Peptider",dose:"300mcg",concentration:"TBD",zone:"Zon 6 — Höger arm",schedule:"Dagligen 22:15",pause:"8v på / 2v av. Paus 1: ~2 jun–15 jun. Paus 2: ~11 aug–24 aug.",benefits:["Förbättrar deep sleep utan att vara sederande","Stödjer naturlig delta-vågssömn","Minskar stressrespons","Förbättrar recovery via bättre sömn","Synergistisk med GH-frisättning"],sideEffects:["Mild dåsighet (önskad effekt)","Kan sänka blodtryck lätt"],timeline:"Vecka 1-2: Förbättrad insomning. Vecka 2-4: Högre deep sleep-score. Vecka 4-8: Märkbar recovery-förbättring.",recDose:"200-400mcg dagligen kväll."},
+  "pep-motsc":{title:"MOTS-c",cat:"Peptider — PLANERAD nov 2026",dose:"5mg 3x/vecka",concentration:"TBD",zone:"Subkutan — rotera mage/lår",schedule:"Mån/Ons/Fre morgon — START november 2026",pause:"8v på / 4v av",benefits:["Mitokondriell peptid — aktiverar AMPK","Förbättrar cellulär energiproduktion","Förbättrar fettanvändning och insulinkänslighet","Tränings-mimikpeptid","Anti-aging på mitokondriell nivå"],sideEffects:["Begränsad human data","Kan påverka blodsockernivåer","Mild trötthet initialt"],timeline:"Vecka 2-4: Förbättrad energi. Vecka 4-8: Synlig kroppskomposition. Vecka 8+: Kumulativa anti-aging-effekter.",recDose:"5mg 3x/vecka subkutant."},
+  "pep-follistatin":{title:"Follistatin 344",cat:"Peptider — PLANERAD vår 2027",dose:"100mcg/dag, kur 10-14 dagar",concentration:"TBD",zone:"Subkutan",schedule:"Dagligen i 10-14 dagar, max 2x/år",pause:"Kort kur — vår 2027 (kräver blodprov mars 2027)",benefits:["Blockerar myostatin — begränsar muskelväxt","Potent hypertrofi utöver naturliga gränser","Målspecifik — ideal för svaga punkter"],sideEffects:["Begränsad human data","Möjlig ledsstelhet","Leverenzym-höjning — kräver blodprov"],timeline:"Kur 10-14 dagar: 2-5 kg ren muskelmassa möjlig. Effekt kvarstår delvis efter kur.",recDose:"100mcg/dag i 10-14 dagar."},
   "sup-mag-am":{title:"Magnesium + D3+K2",cat:"Kosttillskott",benefits:["Magnesium: muskelavslappning, sömn, nervfunktion","D3: immunförsvar, benhälsa, humör","K2: dirigerar kalcium till skelettet, skyddar kärl","Synergistisk trio — D3 behöver K2 för optimal effekt"],timeline:"2-4 veckor för märkbar sömnförbättring. D3-nivåer optimeras efter 2-3 månader."},
   "sup-zink":{title:"Zink 25mg + C-vitamin 500mg",cat:"Kosttillskott",benefits:["Zink: testosteron, immunförsvar, hudläkning, proteinsyntes","C-vitamin: antioxidant, kollagensyntes, järnupptag","Viktigt vid hög träningsbelastning — zink förloras via svett"],timeline:"Immunförbättring inom veckor. Hudeffekter 4-8 veckor."},
   "sup-kollagen":{title:"Kollagen 10g",cat:"Kosttillskott",benefits:["Stödjer hud, hår, naglar, leder","Förbättrar hudens elasticitet","Minskar rynkor och fina linjer","Stödjer tarmhälsa","Synergistiskt med GHK-Cu och C-vitamin"],timeline:"Vecka 4-8: Förbättrad hudkänsla. Vecka 8-12: Synliga förbättringar i hud och hår."},
@@ -80,28 +82,29 @@ const INFO_DATA={
 };
 
 const PLAN_DATA=[
-  {id:"pep-reta",name:"Retatrutide",color:"#6c5ce7",start:"2026-03-10",end:null,pauses:[],note:"Kör tills mål → nedtrappning"},
-  {id:"pep-cagri",name:"Cagrilintide",color:"#6c5ce7",start:"2026-03-10",end:null,pauses:[],note:"Följer Retatrutide"},
-  {id:"pep-semax",name:"Semax",color:"#00cec9",start:"2026-03-10",end:null,pauses:[{from:"2026-04-21",to:"2026-05-05"},{from:"2026-06-16",to:"2026-06-30"}],note:"4-6v på / 2v av"},
-  {id:"pep-frag",name:"HGH Fragment",color:"#ff6b6b",start:"2026-03-10",end:null,pauses:[],note:"Kör tills flanks borta"},
-  {id:"pep-ghkcu",name:"GHK-Cu",color:"#fdcb6e",start:"2026-03-10",end:null,pauses:[],note:"6/1 — söndag vila"},
-  {id:"pep-bpc",name:"BPC+TB500",color:"#00b894",start:"2026-03-10",end:"2026-05-05",pauses:[{from:"2026-05-05",to:"2026-06-02"}],note:"8v på / 4v av"},
-  {id:"pep-epitalon",name:"Epitalon Kur 1",color:"#e84393",start:"2026-04-15",end:"2026-04-25",pauses:[],note:"5mg/dag 10 dagar"},
-  {id:"pep-cjcipa",name:"CJC+Ipa",color:"#0984e3",start:"2026-05-01",end:"2026-07-23",pauses:[],note:"12v på, paus juli"},
-  {id:"pep-dsip",name:"DSIP (planerad)",color:"#55556a",start:"2026-04-15",end:null,pauses:[],note:"200-400mcg kväll — sömn"},
-  {id:"pep-selank",name:"Selank (planerad)",color:"#55556a",start:"2026-05-15",end:null,pauses:[],note:"300mcg morgon — kortisol"},
+  {id:"pep-reta",name:"Retatrutide",color:"#6c5ce7",start:"2026-03-10",end:null,pauses:[],note:"Kör tills mål → 4mg→3mg→2mg underhåll"},
+  {id:"pep-semax",name:"Semax 300mcg",color:"#00cec9",start:"2026-03-10",end:null,pauses:[{from:"2026-05-09",to:"2026-05-22"},{from:"2026-07-04",to:"2026-07-17"},{from:"2026-08-29",to:"2026-09-11"}],note:"6v på / 2v av — sänkt från 600→300mcg"},
+  {id:"pep-frag",name:"HGH Fragment",color:"#ff6b6b",start:"2026-03-10",end:"2026-04-17",pauses:[],note:"Sista vial — ersätts av CJC+Ipa"},
+  {id:"pep-ghkcu",name:"GHK-Cu",color:"#fdcb6e",start:"2026-03-10",end:null,pauses:[],note:"6/1 söndag vila. Underhåll 2mg från 27 jun"},
+  {id:"pep-bpc",name:"BPC+TB500",color:"#00b894",start:"2026-03-28",end:null,pauses:[{from:"2026-05-23",to:"2026-06-19"},{from:"2026-08-15",to:"2026-09-04"},{from:"2026-11-28",to:"2026-12-25"}],note:"333+333mcg dagligen. 8v/4v."},
+  {id:"pep-dsip",name:"DSIP 300mcg",color:"#a29bfe",start:"2026-04-01",end:null,pauses:[{from:"2026-06-02",to:"2026-06-15"},{from:"2026-08-11",to:"2026-08-24"}],note:"Dagligen 22:15 — sömn. 8w/2w."},
+  {id:"pep-cjcipa",name:"CJC+Ipa",color:"#0984e3",start:"2026-04-20",end:null,pauses:[{from:"2026-07-13",to:"2026-08-23"}],note:"100+100mcg dagligen 22:30. 12w/6w."},
+  {id:"pep-epitalon",name:"Epitalon Kur 1",color:"#e84393",start:"2026-05-09",end:"2026-05-18",pauses:[],note:"5mg/dag 10 dagar"},
   {id:"pep-epitalon2",name:"Epitalon Kur 2",color:"#e84393",start:"2026-09-01",end:"2026-09-10",pauses:[],note:"10mg/dag"},
+  {id:"pep-igf1",name:"IGF-1 LR3 (planerad)",color:"#55556a",start:"2026-10-01",end:"2026-10-28",pauses:[],note:"20-40mcg post-workout. Kräver blodprov aug."},
+  {id:"pep-motsc",name:"MOTS-c (planerad)",color:"#55556a",start:"2026-11-01",end:null,pauses:[],note:"5mg 3x/vecka. 8w/4w."},
 ];
 
 var DEFAULT_ITEMS=[
-  {id:"pep-semax",name:"Semax 600mcg",detail:"0.06ml — Vänster mage nedre",category:"peptide",timeSlot:"morning-fasting",badge:"Subkutan",schedule:{type:"specific-days",days:[1,2,3,4,5,6]},active:true},
-  {id:"pep-frag-am",name:"HGH Frag 500mcg",detail:"0.20ml — Vänster mage/lår",category:"peptide",timeSlot:"morning-fasting",badge:"Subkutan",schedule:{type:"daily"},active:true},
-  {id:"pep-frag-pre",name:"HGH Frag 250mcg",detail:"0.10ml — Pre-workout",category:"peptide",timeSlot:"pre-workout",badge:"Subkutan",schedule:{type:"daily"},active:true},
-  {id:"pep-ghkcu",name:"GHK-Cu 3.33mg",detail:"0.10ml — Vänster lår",category:"peptide",timeSlot:"evening-peptide",badge:"Subkutan",schedule:{type:"specific-days",days:[1,2,3,4,5,6]},active:true},
-  {id:"pep-bpc",name:"BPC-157 667mcg",detail:"0.10ml — Vänster arm",category:"peptide",timeSlot:"evening-peptide",badge:"Subkutan",schedule:{type:"alternating",startDate:"2026-03-10"},active:true},
-  {id:"pep-tb500",name:"TB-500 667mcg",detail:"0.10ml — Höger arm (samma spruta BPC)",category:"peptide",timeSlot:"evening-peptide",badge:"Subkutan",schedule:{type:"alternating",startDate:"2026-03-10"},active:true},
-  {id:"pep-reta",name:"Retatrutide 4mg",detail:"0.30ml — Vänster mage ovan",category:"peptide",timeSlot:"morning-fasting",badge:"Subkutan",schedule:{type:"specific-days",days:[0]},active:true},
-  {id:"pep-cagri",name:"Cagrilintide 1mg",detail:"0.20ml — Höger mage ovan",category:"peptide",timeSlot:"morning-fasting",badge:"Subkutan",schedule:{type:"specific-days",days:[0]},active:true},
+  {id:"pep-semax",name:"Semax 300mcg",detail:"0.03ml — Zon 3 vänster mage nedre",category:"peptide",timeSlot:"morning-fasting",badge:"Subkutan",schedule:{type:"specific-days",days:[1,2,3,4,5,6]},active:true},
+  {id:"pep-frag-am",name:"HGH Frag 500mcg",detail:"AVSLUTAS ~17 apr",category:"peptide",timeSlot:"morning-fasting",badge:"Subkutan",schedule:{type:"daily"},active:false},
+  {id:"pep-frag-pre",name:"HGH Frag 250mcg",detail:"AVSLUTAS ~17 apr",category:"peptide",timeSlot:"pre-workout",badge:"Subkutan",schedule:{type:"daily"},active:false},
+  {id:"pep-ghkcu",name:"GHK-Cu 3.33mg",detail:"0.10ml — Zon 7 vänster lår",category:"peptide",timeSlot:"evening-peptide",badge:"Subkutan",schedule:{type:"specific-days",days:[1,2,3,4,5,6]},active:true},
+  {id:"pep-bpc",name:"BPC-157 333mcg",detail:"0.05ml — Zon 5 vänster arm (samma spruta TB)",category:"peptide",timeSlot:"evening-peptide",badge:"Subkutan",schedule:{type:"daily"},active:true},
+  {id:"pep-tb500",name:"TB-500 333mcg",detail:"0.05ml — Zon 5 (samma spruta BPC)",category:"peptide",timeSlot:"evening-peptide",badge:"Subkutan",schedule:{type:"daily"},active:true},
+  {id:"pep-reta",name:"Retatrutide 4mg",detail:"0.30ml — Zon 1 vänster mage ovan",category:"peptide",timeSlot:"morning-fasting",badge:"Subkutan",schedule:{type:"specific-days",days:[0]},active:true},
+  {id:"pep-dsip",name:"DSIP 300mcg",detail:"Zon 6 höger arm — sömn",category:"peptide",timeSlot:"night",badge:"Subkutan",schedule:{type:"daily"},active:true},
+  {id:"pep-cjcipa",name:"CJC+Ipa 100+100mcg",detail:"Zon 4 höger mage nedre — START 20 apr",category:"peptide",timeSlot:"night",badge:"Subkutan",schedule:{type:"daily"},active:false},
   {id:"sup-mag-am",name:"Magnesium + D3+K2",category:"supplement",timeSlot:"morning-fasting",schedule:{type:"daily"},active:true},
   {id:"sup-zink",name:"Zink 25mg + C-vitamin 500mg",category:"supplement",timeSlot:"morning-fasting",schedule:{type:"daily"},active:true},
   {id:"sup-kollagen",name:"Kollagen 10g",category:"supplement",timeSlot:"morning-fasting",schedule:{type:"daily"},active:true},
@@ -911,29 +914,29 @@ var PEPTIDE_MARKERS=[
 
 var PEPTIDE_CYCLES=[
   {id:"reta",name:"Retatrutide",color:"#6c5ce7",start:"2026-03-28",cycleLen:null,pauseDate:null,
-    phases:[{name:"Upptrappning",dose:"1mg→2mg→4mg/v",startDay:0,endDay:21},{name:"Full dos",dose:"4mg/v",startDay:22,endDay:null},{name:"Underhåll",dose:"2mg/v",trigger:"vid mål"}],
+    phases:[{name:"Full dos",dose:"4mg/v",startDay:0,endDay:null},{name:"Nedtrappning",dose:"4→3→2mg",trigger:"vid mål"},{name:"Underhåll",dose:"2mg/v",trigger:"efter nedtrappning"}],
     maintenanceDose:"2mg/v",note:"Kör tills mål → nedtrappning"},
-  {id:"cagri",name:"Cagrilintide",color:"#6c5ce7",start:"2026-03-28",cycleLen:null,pauseDate:null,
-    phases:[{name:"Full dos",dose:"1mg/v",startDay:0,endDay:null},{name:"Underhåll",dose:"0.5mg/v",trigger:"vid mål"}],
-    maintenanceDose:"0.5mg/v",note:"Följer Retatrutide"},
   {id:"semax",name:"Semax",color:"#00cec9",start:"2026-03-28",cycleLen:42,pauseDate:"2026-05-09",
-    phases:[{name:"Full dos",dose:"600mcg/dag",startDay:0,endDay:42},{name:"Paus",dose:"—",startDay:43,endDay:56}],
-    maintenanceDose:null,note:"6v på / 2v av — cykliskt"},
+    phases:[{name:"Full dos",dose:"300mcg/dag",startDay:0,endDay:42},{name:"Paus 2v",dose:"—",startDay:43,endDay:56}],
+    maintenanceDose:null,note:"6v/2v — sänkt 600→300mcg pga sömn"},
   {id:"frag",name:"HGH Fragment",color:"#ff6b6b",start:"2026-03-28",cycleLen:null,pauseDate:null,
-    phases:[{name:"Full dos",dose:"750mcg/dag",startDay:0,endDay:null},{name:"Underhåll",dose:"250mcg/dag",trigger:"vid mål"}],
-    maintenanceDose:"250mcg/dag",note:"Löpande tills mål"},
+    phases:[{name:"Sista vial",dose:"500mcg/dag",startDay:0,endDay:20}],
+    maintenanceDose:null,note:"Avslutas ~17 apr. Ersätts av CJC+Ipa."},
   {id:"ghkcu",name:"GHK-Cu",color:"#fdcb6e",start:"2026-03-28",cycleLen:null,pauseDate:null,
-    phases:[{name:"Full dos",dose:"3.33mg mån-lör",startDay:0,endDay:null}],
-    maintenanceDose:null,note:"6/1 — söndag vila"},
+    phases:[{name:"Full dos",dose:"3.33mg mån-lör",startDay:0,endDay:91},{name:"Underhåll",dose:"2mg mån-lör",startDay:92,endDay:null}],
+    maintenanceDose:"2mg/dag från 27 jun",note:"6/1 — söndag vila"},
   {id:"bpctb",name:"BPC+TB500",color:"#00b894",start:"2026-03-28",cycleLen:56,pauseDate:"2026-05-23",
-    phases:[{name:"Full dos",dose:"667mcg varannan dag",startDay:0,endDay:56},{name:"Paus 4v",dose:"—",startDay:57,endDay:84},{name:"Cykel 2",dose:"667mcg varannan dag",startDay:85,endDay:null}],
-    maintenanceDose:null,note:"8v på / 4v av"},
-  {id:"epi",name:"Epitalon",color:"#e84393",start:"2026-04-15",cycleLen:10,pauseDate:null,
+    phases:[{name:"Full dos",dose:"333+333mcg dagligen",startDay:0,endDay:56},{name:"Paus 4v",dose:"—",startDay:57,endDay:84},{name:"Cykel 2",dose:"333+333mcg dagligen",startDay:85,endDay:null}],
+    maintenanceDose:null,note:"8v/4v — BPC+TB samma spruta"},
+  {id:"dsip",name:"DSIP",color:"#a29bfe",start:"2026-04-01",cycleLen:56,pauseDate:"2026-06-02",
+    phases:[{name:"Full dos",dose:"300mcg dagligen 22:15",startDay:0,endDay:56},{name:"Paus 2v",dose:"—",startDay:57,endDay:70}],
+    maintenanceDose:null,note:"8w/2w — sömnförbättring"},
+  {id:"epi",name:"Epitalon",color:"#e84393",start:"2026-05-09",cycleLen:10,pauseDate:null,
     phases:[{name:"Kur 1",dose:"5mg/dag 10d",startDay:0,endDay:10},{name:"Paus till sep",dose:"—",startDay:11,endDay:null}],
-    maintenanceDose:null,note:"2 kurer/år"},
-  {id:"cjcipa",name:"CJC+Ipa",color:"#0984e3",start:"2026-05-01",cycleLen:84,pauseDate:"2026-07-23",
-    phases:[{name:"Full dos",dose:"1x/v kväll",startDay:0,endDay:84},{name:"Paus 4-6v",dose:"—",startDay:85,endDay:null}],
-    maintenanceDose:null,note:"12v på, paus juli"}
+    maintenanceDose:null,note:"Kur 2: 1-10 sep 10mg/dag"},
+  {id:"cjcipa",name:"CJC+Ipa",color:"#0984e3",start:"2026-04-20",cycleLen:84,pauseDate:"2026-07-13",
+    phases:[{name:"Full dos",dose:"100+100mcg dagligen 22:30",startDay:0,endDay:84},{name:"Paus 6v",dose:"—",startDay:85,endDay:126}],
+    maintenanceDose:null,note:"12w/6w — ersätter Fragment"}
 ];
 
 var DEFAULT_TRACKER={
@@ -942,13 +945,13 @@ var DEFAULT_TRACKER={
   goalWeight:68,
   vials:[
     {id:"v-reta",name:"Retatrutide",totalMl:3,remainingMl:3,cost:3200,color:"#6c5ce7",doses:[{itemId:"pep-reta",ml:0.30}],resetDate:"2026-03-28",mlAtReset:3},
-    {id:"v-semax",name:"Semax",totalMl:3,remainingMl:3,cost:800,color:"#00cec9",doses:[{itemId:"pep-semax",ml:0.06}],resetDate:"2026-03-28",mlAtReset:3},
-    {id:"v-frag",name:"Fragment",totalMl:2,remainingMl:2,cost:480,color:"#ff6b6b",doses:[{itemId:"pep-frag-am",ml:0.20},{itemId:"pep-frag-pre",ml:0.10}],resetDate:"2026-03-28",mlAtReset:2},
+    {id:"v-semax",name:"Semax",totalMl:3,remainingMl:3,cost:800,color:"#00cec9",doses:[{itemId:"pep-semax",ml:0.03}],resetDate:"2026-03-28",mlAtReset:3},
     {id:"v-ghkcu",name:"GHK-Cu",totalMl:3,remainingMl:3,cost:480,color:"#fdcb6e",doses:[{itemId:"pep-ghkcu",ml:0.10}],resetDate:"2026-03-28",mlAtReset:3},
-    {id:"v-bpc",name:"BPC-157",totalMl:3,remainingMl:3,cost:640,color:"#00b894",doses:[{itemId:"pep-bpc",ml:0.10}],resetDate:"2026-03-28",mlAtReset:3},
-    {id:"v-tb500",name:"TB-500",totalMl:3,remainingMl:3,cost:640,color:"#00b894",doses:[{itemId:"pep-tb500",ml:0.10}],resetDate:"2026-03-28",mlAtReset:3},
-    {id:"v-epi",name:"Epitalon",totalMl:1,remainingMl:1,cost:640,color:"#e84393",doses:[],resetDate:"2026-04-15",mlAtReset:1},
-    {id:"v-cjcipa",name:"CJC+Ipa",totalMl:1,remainingMl:1,cost:480,color:"#0984e3",doses:[],resetDate:"2026-05-01",mlAtReset:1}
+    {id:"v-bpc",name:"BPC-157",totalMl:3,remainingMl:3,cost:640,color:"#00b894",doses:[{itemId:"pep-bpc",ml:0.05}],resetDate:"2026-03-28",mlAtReset:3},
+    {id:"v-tb500",name:"TB-500",totalMl:3,remainingMl:3,cost:640,color:"#00b894",doses:[{itemId:"pep-tb500",ml:0.05}],resetDate:"2026-03-28",mlAtReset:3},
+    {id:"v-epi",name:"Epitalon",totalMl:1,remainingMl:1,cost:640,color:"#e84393",doses:[],resetDate:"2026-05-09",mlAtReset:1},
+    {id:"v-cjcipa",name:"CJC+Ipa",totalMl:1,remainingMl:1,cost:480,color:"#0984e3",doses:[],resetDate:"2026-04-20",mlAtReset:1},
+    {id:"v-dsip",name:"DSIP",totalMl:1,remainingMl:1,cost:0,color:"#a29bfe",doses:[],resetDate:"2026-04-01",mlAtReset:1}
   ]
 };
 
@@ -1570,9 +1573,9 @@ function TabEconomy({ecoData,saveEco}){
     save({income:ni});setAddMode(null);
   }
   // Add expense
-  function addExp(amount,note){
+  function addExp(amount,note,cat){
     var d=todayStr,ne={...entries};if(!ne[d])ne[d]=[];
-    ne[d]=[{id:uid(),time:new Date().toTimeString().slice(0,5),amount:Number(amount),note:note}].concat(ne[d]);
+    ne[d]=[{id:uid(),time:new Date().toTimeString().slice(0,5),amount:Number(amount),note:note,cat:cat||"ovrigt"}].concat(ne[d]);
     save({entries:ne});setAddMode(null);
   }
   // Delete transaction
@@ -1592,7 +1595,7 @@ function TabEconomy({ecoData,saveEco}){
   return(<div style={{padding:"14px 18px 120px",animation:"fi .2s ease-out"}}>
     <div style={{fontSize:20,fontWeight:800,marginBottom:14}}>Ekonomi</div>
     <div style={{display:"flex",gap:3,marginBottom:14}}>
-      {[{k:"daily",l:"Daglig"},{k:"overview",l:"Översikt"},{k:"savings",l:"Sparmål"}].map(function(s){return(
+      {[{k:"daily",l:"Daglig"},{k:"overview",l:"Översikt"},{k:"savings",l:"Sparmål"},{k:"analysis",l:"📊 Analys"}].map(function(s){return(
         <button key={s.k} onClick={function(){setSub(s.k)}} style={{flex:1,padding:"7px 0",borderRadius:8,border:sub===s.k?"1px solid "+T.accent:"1px solid "+T.border,background:sub===s.k?"rgba(108,92,231,0.1)":T.card,color:sub===s.k?T.accent:T.muted,fontSize:10,fontWeight:600,cursor:"pointer"}}>{s.l}</button>
       )})}
     </div>
@@ -1686,7 +1689,7 @@ function TabEconomy({ecoData,saveEco}){
 
       {/* IncForm */}
       {addMode==="inc"&&<EcoForm type="inc" onSave={addInc} onClose={function(){setAddMode(null)}}/>}
-      {addMode==="exp"&&<EcoForm type="exp" onSave={function(a,n){addExp(a,n)} } onClose={function(){setAddMode(null)}}/>}
+      {addMode==="exp"&&<EcoForm type="exp" onSave={function(a,n,c){addExp(a,n,c)}} onClose={function(){setAddMode(null)}}/>}
 
       {/* Transaktioner */}
       <div style={{marginBottom:8}}>
@@ -1713,7 +1716,7 @@ function TabEconomy({ecoData,saveEco}){
                 <div style={{width:3,height:28,borderRadius:2,background:isInc?T.success:T.danger,flexShrink:0}}/>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:12,fontWeight:600}}>{tx.note||"Transaktion"}</div>
-                  <div style={{fontSize:9,color:T.subtle}}>{tx.time||""}{isInc&&tx.type?" · "+(tx.type==="fast"?"Fast":"Rörlig"):""}</div>
+                  <div style={{fontSize:9,color:T.subtle}}>{tx.time||""}{isInc&&tx.type?" · "+(tx.type==="fast"?"Fast":"Rörlig"):""}{!isInc&&tx.cat?(function(){var ec=EXP_CATS.find(function(c){return c.k===tx.cat});return ec?" · "+ec.l:""})():""}</div>
                 </div>
                 <div style={{fontSize:13,fontWeight:700,fontFamily:"'JetBrains Mono'",color:isInc?T.success:T.danger}}>{isInc?"+":"−"}{tx.amount.toLocaleString("sv")}</div>
               </div>
@@ -2072,16 +2075,116 @@ function TabEconomy({ecoData,saveEco}){
 
       <button onClick={function(){var n=prompt("Namn:");if(!n)return;var a=prompt("Inköpspris (kr):");if(!a||isNaN(a))return;var ev=prompt("Förväntat försäljningsvärde:");if(ev===null)return;var amt=Number(a);save({investments:investments.concat([{id:uid(),name:n,amount:amt,expectedValue:Number(ev)||amt,date:dk(new Date()),status:"active",sales:[]}]),liquidity:baseLiq-amt})}} style={{width:"100%",padding:10,borderRadius:10,border:"1px dashed "+T.warning,background:T.warning+"05",color:T.warning,fontSize:12,fontWeight:700,cursor:"pointer",marginTop:10}}>+ Ny lagerpost</button>
     </div>}
+    {/* === ANALYS === */}
+    {sub==="analysis"&&(function(){
+      /* Gather all expenses with categories for last 3 months */
+      var now2=new Date(),curM=now2.getMonth(),curY=now2.getFullYear();
+      function getMonthKey(m,y){return y+"-"+String(m+1).padStart(2,"0")}
+      function getMonthExpenses(m,y){
+        var prefix=getMonthKey(m,y);var total={};
+        Object.keys(entries).forEach(function(d){if(d.startsWith(prefix)){(entries[d]||[]).forEach(function(e){var c=e.cat||"ovrigt";total[c]=(total[c]||0)+e.amount})}});
+        return total;
+      }
+      var thisMonth=getMonthExpenses(curM,curY);
+      var prevM=curM===0?11:curM-1;var prevY=curM===0?curY-1:curY;
+      var lastMonth=getMonthExpenses(prevM,prevY);
+      var prev2M=prevM===0?11:prevM-1;var prev2Y=prevM===0?prevY-1:prevY;
+      var twoMonthsAgo=getMonthExpenses(prev2M,prev2Y);
+      /* Total per month */
+      var thisTotal=Object.values(thisMonth).reduce(function(s,v){return s+v},0);
+      var lastTotal=Object.values(lastMonth).reduce(function(s,v){return s+v},0);
+      /* All cats used */
+      var allCatKeys={};[thisMonth,lastMonth,twoMonthsAgo].forEach(function(m){Object.keys(m).forEach(function(k){allCatKeys[k]=true})});
+      var usedCats=EXP_CATS.filter(function(ec){return allCatKeys[ec.k]});
+      /* Daily average */
+      var daysThisMonth=now2.getDate();
+      var dailyAvg=daysThisMonth>0?Math.round(thisTotal/daysThisMonth):0;
+      /* Top 3 */
+      var sorted=usedCats.map(function(ec){return{...ec,amount:thisMonth[ec.k]||0}}).sort(function(a,b){return b.amount-a.amount});
+      var top3=sorted.slice(0,3);
+      /* Month names */
+      var MN=["Jan","Feb","Mar","Apr","Maj","Jun","Jul","Aug","Sep","Okt","Nov","Dec"];
+      return <div>
+        {/* Summary */}
+        <div style={{display:"flex",gap:6,marginBottom:10}}>
+          <div style={{flex:1,background:T.card,border:"1px solid "+T.border,borderRadius:10,padding:"10px",textAlign:"center"}}>
+            <div style={{fontSize:7,color:T.subtle,fontWeight:600}}>DENNA MÅNAD</div>
+            <div style={{fontSize:18,fontWeight:800,color:T.danger,fontFamily:"'JetBrains Mono'"}}>{thisTotal.toLocaleString("sv")}</div>
+          </div>
+          <div style={{flex:1,background:T.card,border:"1px solid "+T.border,borderRadius:10,padding:"10px",textAlign:"center"}}>
+            <div style={{fontSize:7,color:T.subtle,fontWeight:600}}>SNITT/DAG</div>
+            <div style={{fontSize:18,fontWeight:800,color:T.warning,fontFamily:"'JetBrains Mono'"}}>{dailyAvg.toLocaleString("sv")}</div>
+          </div>
+        </div>
+        {/* Top 3 */}
+        {top3.length>0&&<div style={{marginBottom:12}}>
+          <div style={{fontSize:9,fontWeight:700,color:T.muted,marginBottom:4}}>🏆 Största utgifterna</div>
+          {top3.map(function(t,i){return <div key={t.k} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 10px",background:T.card,border:"1px solid "+T.border,borderRadius:8,marginBottom:3}}>
+            <span style={{fontSize:14}}>{["🥇","🥈","🥉"][i]}</span>
+            <div style={{flex:1}}><span style={{fontSize:11,fontWeight:600}}>{t.l}</span></div>
+            <span style={{fontSize:12,fontWeight:800,fontFamily:"'JetBrains Mono'",color:t.c}}>{t.amount.toLocaleString("sv")} kr</span>
+          </div>})}
+        </div>}
+        {/* Category breakdown with trends */}
+        <div style={{fontSize:9,fontWeight:700,color:T.muted,marginBottom:6}}>Kategorier — {MN[curM]} vs {MN[prevM]}</div>
+        {usedCats.length===0&&<div style={{textAlign:"center",padding:20,color:T.subtle,fontSize:10}}>Inga kategoriserade utgifter ännu</div>}
+        {usedCats.map(function(ec){
+          var cur=thisMonth[ec.k]||0;var prev=lastMonth[ec.k]||0;
+          var pct=prev>0?Math.round((cur-prev)/prev*100):cur>0?100:0;
+          var maxVal=Math.max.apply(null,usedCats.map(function(c){return thisMonth[c.k]||0}))||1;
+          var barW=Math.max(5,Math.round(cur/maxVal*100));
+          return <div key={ec.k} style={{marginBottom:6}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:2}}>
+              <span style={{fontSize:10,fontWeight:600}}>{ec.l}</span>
+              <div style={{display:"flex",alignItems:"center",gap:4}}>
+                <span style={{fontSize:10,fontWeight:800,fontFamily:"'JetBrains Mono'",color:ec.c}}>{cur.toLocaleString("sv")} kr</span>
+                {prev>0&&<span style={{fontSize:8,fontWeight:700,color:pct>0?T.danger:pct<0?T.success:T.muted}}>{pct>0?"↑":pct<0?"↓":"→"}{Math.abs(pct)}%</span>}
+              </div>
+            </div>
+            {/* Stacked bar: this vs last month */}
+            <div style={{display:"flex",gap:2,height:6}}>
+              <div style={{width:barW+"%",background:ec.c,borderRadius:3,transition:"width .4s"}}/>
+              {prev>0&&<div style={{width:Math.max(3,Math.round(prev/maxVal*100))+"%",background:ec.c+"44",borderRadius:3}}/>}
+            </div>
+            <div style={{display:"flex",justifyContent:"space-between",marginTop:1}}>
+              <span style={{fontSize:7,color:T.subtle}}>{MN[curM]}: {cur.toLocaleString("sv")}</span>
+              <span style={{fontSize:7,color:T.subtle}}>{MN[prevM]}: {prev.toLocaleString("sv")}</span>
+            </div>
+          </div>
+        })}
+        {/* Stacked total bar */}
+        {usedCats.length>0&&<div style={{marginTop:12}}>
+          <div style={{fontSize:9,fontWeight:700,color:T.muted,marginBottom:4}}>Fördelning</div>
+          <div style={{display:"flex",height:12,borderRadius:6,overflow:"hidden"}}>
+            {sorted.filter(function(c){return c.amount>0}).map(function(c){return <div key={c.k} title={c.l+": "+c.amount+"kr"} style={{width:(c.amount/thisTotal*100)+"%",background:c.c,transition:"width .4s"}}/>})}
+          </div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:4}}>
+            {sorted.filter(function(c){return c.amount>0}).map(function(c){return <div key={c.k} style={{display:"flex",alignItems:"center",gap:3}}><div style={{width:6,height:6,borderRadius:2,background:c.c}}/><span style={{fontSize:7,color:T.subtle}}>{c.l} {Math.round(c.amount/thisTotal*100)}%</span></div>})}
+          </div>
+        </div>}
+      </div>
+    })()}
   </div>);
 }
 
+var EXP_CATS=[{k:"bil",l:"🚗 Bil",c:"#0984e3"},{k:"mat",l:"🍔 Mat",c:"#e17055"},{k:"halsa",l:"💊 Hälsa",c:"#00b894"},{k:"traning",l:"🏋️ Träning",c:"#d63031"},{k:"boende",l:"🏠 Boende",c:"#6c5ce7"},{k:"klader",l:"👔 Kläder",c:"#fdcb6e"},{k:"teknik",l:"📱 Teknik",c:"#00cec9"},{k:"foretag",l:"💼 Företag",c:"#e84393"},{k:"noje",l:"🎉 Nöje",c:"#a29bfe"},{k:"resor",l:"✈️ Resor",c:"#55efc4"},{k:"utbildning",l:"📚 Utbildn",c:"#74b9ff"},{k:"ovrigt",l:"❓ Övrigt",c:"#636e72"}];
 function EcoForm({type,onSave,onClose}){
   const[amount,setAmount]=useState("");
+  const[note,setNote]=useState("");
+  const[cat,setCat]=useState("ovrigt");
   var isInc=type==="inc";
-  return(<div style={{display:"flex",gap:4,marginBottom:10,animation:"fi .1s ease-out"}}>
-    <input value={amount} onChange={function(e){setAmount(e.target.value)}} placeholder="Belopp" type="number" inputMode="numeric" autoFocus style={{flex:1,padding:"12px",borderRadius:10,border:"1px solid "+(isInc?T.success:T.danger)+"44",background:T.card,color:T.text,fontSize:16,fontWeight:700,fontFamily:"'JetBrains Mono'",outline:"none"}}/>
-    <button onClick={function(){if(amount&&!isNaN(amount)){if(isInc)onSave(Number(amount),"","rorlig");else onSave(Number(amount),"")}}} style={{padding:"12px 20px",borderRadius:10,border:"none",background:isInc?T.success:T.danger,color:"#fff",fontSize:13,fontWeight:800,cursor:"pointer",opacity:amount?"1":"0.4"}}>Spara</button>
-    <button onClick={onClose} style={{padding:"12px",borderRadius:10,border:"1px solid "+T.border,background:"transparent",color:T.subtle,fontSize:11,fontWeight:600,cursor:"pointer"}}>✕</button>
+  return(<div style={{marginBottom:10,animation:"fi .1s ease-out"}}>
+    <div style={{display:"flex",gap:4,marginBottom:isInc?0:6}}>
+      <input value={amount} onChange={function(e){setAmount(e.target.value)}} placeholder="Belopp" type="number" inputMode="numeric" autoFocus style={{flex:1,padding:"12px",borderRadius:10,border:"1px solid "+(isInc?T.success:T.danger)+"44",background:T.card,color:T.text,fontSize:16,fontWeight:700,fontFamily:"'JetBrains Mono'",outline:"none"}}/>
+      <button onClick={function(){if(amount&&!isNaN(amount)){if(isInc)onSave(Number(amount),"","rorlig");else onSave(Number(amount),note,cat)}}} style={{padding:"12px 20px",borderRadius:10,border:"none",background:isInc?T.success:T.danger,color:"#fff",fontSize:13,fontWeight:800,cursor:"pointer",opacity:amount?"1":"0.4"}}>Spara</button>
+      <button onClick={onClose} style={{padding:"12px",borderRadius:10,border:"1px solid "+T.border,background:"transparent",color:T.subtle,fontSize:11,fontWeight:600,cursor:"pointer"}}>✕</button>
+    </div>
+    {!isInc&&<div>
+      <input value={note} onChange={function(e){setNote(e.target.value)}} placeholder="Anteckning (valfri)" style={{width:"100%",padding:"8px 10px",borderRadius:6,border:"1px solid "+T.border,background:T.surface,color:T.text,fontSize:10,marginBottom:6,boxSizing:"border-box"}}/>
+      <div style={{display:"flex",gap:3,flexWrap:"wrap"}}>
+        {EXP_CATS.map(function(ec){return <button key={ec.k} onClick={function(){setCat(ec.k)}} style={{padding:"3px 6px",borderRadius:5,border:cat===ec.k?"1px solid "+ec.c:"1px solid "+T.border,background:cat===ec.k?ec.c+"18":"transparent",color:cat===ec.k?ec.c:T.muted,fontSize:7,fontWeight:700,cursor:"pointer"}}>{ec.l}</button>})}
+      </div>
+    </div>}
   </div>);
 }
 
